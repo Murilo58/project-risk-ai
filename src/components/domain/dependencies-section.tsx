@@ -16,6 +16,7 @@ import {
 import { CriticalityBadge, DependencyStatusBadge } from "@/components/domain/badges";
 import { EmptyState } from "@/components/domain/empty-state";
 import { DependencyForm } from "@/components/domain/dependency-form";
+import { SectionCard } from "@/components/domain/section-card";
 import {
   useCreateDependency,
   useDeleteDependency,
@@ -80,14 +81,14 @@ export function DependenciesSection({
   const isSubmitting = createDependency.isPending || updateDependency.isPending;
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Dependências</h2>
+    <SectionCard
+      title="Dependências"
+      action={
         <Button size="sm" onClick={() => setEditing("new")}>
           Adicionar dependência
         </Button>
-      </div>
-
+      }
+    >
       {dependencies.length === 0 ? (
         <EmptyState
           title="Nenhuma dependência cadastrada"
@@ -153,6 +154,6 @@ export function DependenciesSection({
           />
         </DialogContent>
       </Dialog>
-    </section>
+    </SectionCard>
   );
 }

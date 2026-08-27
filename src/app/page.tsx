@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -15,25 +14,33 @@ import {
 } from "@/components/ui/table";
 import { CriticalityBadge, HealthBandBadge } from "@/components/domain/badges";
 import { EmptyState } from "@/components/domain/empty-state";
+import { PageHeader } from "@/components/domain/page-header";
+import { SectionCard } from "@/components/domain/section-card";
+import { StatCard, type StatCardTone } from "@/components/domain/stat-card";
 import { useDashboard } from "@/hooks/use-dashboard";
-import { HEALTH_BAND_LABELS } from "@/lib/enums";
+import { HEALTH_BAND_LABELS, type HealthBand } from "@/lib/enums";
+
+const HEALTH_BAND_TONE: Record<HealthBand, StatCardTone> = {
+  HEALTHY: "success",
+  ATTENTION: "warning",
+  RISK: "severe",
+  CRITICAL: "danger",
+};
 
 export default function DashboardPage() {
   const { data, isLoading, isError } = useDashboard();
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Dashboard Executivo</h1>
-          <p className="text-muted-foreground text-sm">
-            Visão consolidada da saúde do portfólio de projetos.
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link href="/projects">Gerenciar projetos</Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="Dashboard Executivo"
+        description="Visão consolidada da saúde do portfólio de projetos."
+        action={
+          <Button asChild variant="outline">
+            <Link href="/projects">Gerenciar projetos</Link>
+          </Button>
+        }
+      />
 
       {isLoading && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -62,38 +69,29 @@ export default function DashboardPage() {
         <>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {(["HEALTHY", "ATTENTION", "RISK", "CRITICAL"] as const).map((band) => (
-              <Card key={band}>
-                <CardContent className="flex flex-col gap-1">
-                  <span className="text-muted-foreground text-xs">
-                    {HEALTH_BAND_LABELS[band]}
-                  </span>
-                  <span className="text-3xl font-bold">{data.summary[band]}</span>
-                </CardContent>
-              </Card>
+              <StatCard
+                key={band}
+                label={HEALTH_BAND_LABELS[band]}
+                value={data.summary[band]}
+                tone={HEALTH_BAND_TONE[band]}
+              />
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="flex flex-col gap-1">
-                <span className="text-muted-foreground text-xs">
-                  Riscos críticos abertos
-                </span>
-                <span className="text-3xl font-bold">{data.criticalOpenRisks}</span>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="flex flex-col gap-1">
-                <span className="text-muted-foreground text-xs">
-                  Milestones atrasados
-                </span>
-                <span className="text-3xl font-bold">{data.delayedMilestones}</span>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <StatCard
+              label="Riscos críticos abertos"
+              value={data.criticalOpenRisks}
+              tone={data.criticalOpenRisks > 0 ? "danger" : "neutral"}
+            />
+            <StatCard
+              label="Milestones atrasados"
+              value={data.delayedMilestones}
+              tone={data.delayedMilestones > 0 ? "warning" : "neutral"}
+            />
           </div>
 
-          <div className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold">Projetos por Health Score</h2>
+          <SectionCard title="Projetos por Health Score">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -107,23 +105,32 @@ export default function DashboardPage() {
                 {data.projects.map((project) => (
                   <TableRow key={project.id}>
                     <TableCell className="font-medium">
-                      <Link href={`/projects/${project.id}`} className="hover:underline">
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="text-primary hover:underline"
+                      >
                         {project.name}
                       </Link>
                     </TableCell>
-                    <TableCell>{project.owner}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {project.owner}
+                    </TableCell>
                     <TableCell>
                       <CriticalityBadge value={project.criticality} />
                     </TableCell>
-                    <TableCell className="flex items-center gap-2">
-                      <span className="font-semibold">{project.score}</span>
-                      <HealthBandBadge value={project.band} />
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold tabular-nums">
+                          {project.score}
+                        </span>
+                        <HealthBandBadge value={project.band} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </SectionCard>
         </>
       )}
     </div>

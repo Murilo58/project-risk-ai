@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CriticalityBadge, ProjectStatusBadge } from "@/components/domain/badges";
 import { DependenciesSection } from "@/components/domain/dependencies-section";
@@ -15,6 +14,7 @@ import { AiAdvisorSection } from "@/components/domain/ai-advisor-section";
 import { HealthScoreCard } from "@/components/domain/health-score-card";
 import { MilestonesSection } from "@/components/domain/milestones-section";
 import { RisksSection } from "@/components/domain/risks-section";
+import { SectionCard } from "@/components/domain/section-card";
 import { useDeleteProject, useProject } from "@/hooks/use-projects";
 import { ApiError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
@@ -77,13 +77,15 @@ export default function ProjectDetailPage({
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">{project.name}</h1>
+          <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+            {project.name}
+          </h1>
           <div className="flex gap-2">
             <ProjectStatusBadge value={project.status} />
             <CriticalityBadge value={project.criticality} />
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <Button asChild variant="outline">
             <Link href={`/projects/${project.id}/edit`}>Editar</Link>
           </Button>
@@ -97,8 +99,8 @@ export default function ProjectDetailPage({
         </div>
       </div>
 
-      <Card>
-        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <SectionCard title="Informações gerais">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Field label="Responsável" value={project.owner} />
           <Field label="Progresso" value={`${project.progressPercent}%`} />
           <Field label="Início" value={formatDate(project.startDate)} />
@@ -118,8 +120,8 @@ export default function ProjectDetailPage({
               <Field label="Observações" value={project.notes} />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       <HealthScoreCard projectId={project.id} />
 
@@ -134,8 +136,10 @@ export default function ProjectDetailPage({
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="text-sm">{value}</p>
+      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+        {label}
+      </p>
+      <p className="text-foreground mt-0.5 text-sm">{value}</p>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 import { DelayedBadge, MilestoneStatusBadge } from "@/components/domain/badges";
 import { EmptyState } from "@/components/domain/empty-state";
 import { MilestoneForm } from "@/components/domain/milestone-form";
+import { SectionCard } from "@/components/domain/section-card";
 import {
   useCreateMilestone,
   useDeleteMilestone,
@@ -76,14 +77,14 @@ export function MilestonesSection({
   const isSubmitting = createMilestone.isPending || updateMilestone.isPending;
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Marcos</h2>
+    <SectionCard
+      title="Marcos"
+      action={
         <Button size="sm" onClick={() => setEditing("new")}>
           Adicionar marco
         </Button>
-      </div>
-
+      }
+    >
       {milestones.length === 0 ? (
         <EmptyState
           title="Nenhum marco cadastrado"
@@ -142,6 +143,6 @@ export function MilestonesSection({
           />
         </DialogContent>
       </Dialog>
-    </section>
+    </SectionCard>
   );
 }

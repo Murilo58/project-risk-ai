@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/domain/empty-state";
 import { RiskForm } from "@/components/domain/risk-form";
+import { SectionCard } from "@/components/domain/section-card";
 import {
   useAcceptSuggestion,
   useAiSuggestions,
@@ -24,6 +24,22 @@ import type {
   AiRiskSuggestionContent,
   AiSuggestion,
 } from "@/types/api";
+
+function AiSuggestionBadge() {
+  return (
+    <Badge className="border border-indigo-200 bg-indigo-50 text-indigo-700">
+      Sugestão de IA
+    </Badge>
+  );
+}
+
+function AiSuggestionCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="bg-card flex flex-col gap-4 rounded-lg border border-l-4 border-l-indigo-400 p-4">
+      {children}
+    </div>
+  );
+}
 
 export function AiAdvisorSection({ projectId }: { projectId: string }) {
   const { data: suggestions } = useAiSuggestions(projectId);
@@ -73,69 +89,79 @@ export function AiAdvisorSection({ projectId }: { projectId: string }) {
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">AI Risk Advisor</h2>
-          <p className="text-muted-foreground text-sm">
-            Apoio à decisão via IA — sugestões nunca são aplicadas automaticamente.
-          </p>
-        </div>
+    <SectionCard
+      title="AI Risk Advisor"
+      description="Apoio à decisão via IA — sugestões nunca são aplicadas automaticamente."
+      action={
         <Button onClick={handleAnalyze} disabled={runAnalysis.isPending}>
           {runAnalysis.isPending ? "Analisando..." : "Analisar com IA"}
         </Button>
-      </div>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        {summary && (
+          <ExecutiveSummaryCard
+            content={summary.content as AiExecutiveSummaryContent}
+            onDismiss={() => handleDismiss(summary.id)}
+          />
+        )}
 
-      {summary && (
-        <ExecutiveSummaryCard
-          content={summary.content as AiExecutiveSummaryContent}
-          onDismiss={() => handleDismiss(summary.id)}
-        />
-      )}
+        {riskSuggestions.length === 0 && !summary && (
+          <EmptyState
+            title="Nenhuma sugestão pendente"
+            description="Clique em “Analisar com IA” para identificar riscos potenciais e sinais de deterioração."
+          />
+        )}
 
-      {riskSuggestions.length === 0 && !summary && (
-        <EmptyState
-          title="Nenhuma sugestão pendente"
-          description="Clique em “Analisar com IA” para identificar riscos potenciais e sinais de deterioração."
-        />
-      )}
-
-      {riskSuggestions.map((suggestion) => {
-        const content = suggestion.content as AiRiskSuggestionContent;
-        return (
-          <Card key={suggestion.id}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">Sugestão de IA</Badge>
-                <CardTitle className="text-base">{content.title}</CardTitle>
+        {riskSuggestions.map((suggestion) => {
+          const content = suggestion.content as AiRiskSuggestionContent;
+          return (
+            <AiSuggestionCard key={suggestion.id}>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AiSuggestionBadge />
+                  <h3 className="text-foreground text-base font-semibold">
+                    {content.title}
+                  </h3>
+                </div>
               </div>
-              <span className="text-muted-foreground text-xs">
-                {RISK_CATEGORY_LABELS[content.category]} · Prob. {content.probability} ·
-                Impacto {content.impact}
-              </span>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <p className="text-sm">{content.description}</p>
-              <p className="text-muted-foreground text-sm">
-                <span className="font-medium">Mitigação sugerida:</span>{" "}
-                {content.mitigationStrategy}
-              </p>
+
+              <p className="text-foreground text-sm">{content.description}</p>
+
+              <div className="grid grid-cols-3 gap-3 sm:w-fit sm:grid-cols-3">
+                <MiniField
+                  label="Categoria"
+                  value={RISK_CATEGORY_LABELS[content.category]}
+                />
+                <MiniField label="Probabilidade" value={String(content.probability)} />
+                <MiniField label="Impacto" value={String(content.impact)} />
+              </div>
+
+              <div>
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Mitigação sugerida
+                </p>
+                <p className="text-foreground mt-0.5 text-sm">
+                  {content.mitigationStrategy}
+                </p>
+              </div>
+
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => setReviewing(suggestion)}>
                   Aceitar
                 </Button>
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => handleDismiss(suggestion.id)}
                 >
                   Descartar
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+            </AiSuggestionCard>
+          );
+        })}
+      </div>
 
       <Dialog
         open={reviewing !== null}
@@ -154,7 +180,18 @@ export function AiAdvisorSection({ projectId }: { projectId: string }) {
           )}
         </DialogContent>
       </Dialog>
-    </section>
+    </SectionCard>
+  );
+}
+
+function MiniField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-20">
+      <p className="text-muted-foreground text-[0.65rem] font-medium tracking-wide uppercase">
+        {label}
+      </p>
+      <p className="text-foreground text-sm font-medium">{value}</p>
+    </div>
   );
 }
 
@@ -166,26 +203,24 @@ function ExecutiveSummaryCard({
   onDismiss: () => void;
 }) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <AiSuggestionCard>
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Badge variant="outline">Sugestão de IA</Badge>
-          <CardTitle className="text-base">Resumo executivo</CardTitle>
+          <AiSuggestionBadge />
+          <h3 className="text-foreground text-base font-semibold">Resumo executivo</h3>
         </div>
-        <Button size="sm" variant="ghost" onClick={onDismiss}>
+        <Button size="sm" variant="outline" onClick={onDismiss}>
           Descartar
         </Button>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="text-sm">{content.summary}</p>
-        {content.attentionPoints.length > 0 && (
-          <ul className="list-inside list-disc text-sm">
-            {content.attentionPoints.map((point, index) => (
-              <li key={index}>{point}</li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+      <p className="text-foreground text-sm">{content.summary}</p>
+      {content.attentionPoints.length > 0 && (
+        <ul className="text-foreground list-inside list-disc text-sm">
+          {content.attentionPoints.map((point, index) => (
+            <li key={index}>{point}</li>
+          ))}
+        </ul>
+      )}
+    </AiSuggestionCard>
   );
 }

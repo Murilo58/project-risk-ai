@@ -4,8 +4,10 @@ import { use } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { ProjectForm } from "@/components/domain/project-form";
 import { EmptyState } from "@/components/domain/empty-state";
+import { PageHeader } from "@/components/domain/page-header";
+import { ProjectForm } from "@/components/domain/project-form";
+import { SectionCard } from "@/components/domain/section-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProject, useUpdateProject } from "@/hooks/use-projects";
 import { ApiError } from "@/lib/api-client";
@@ -42,12 +44,14 @@ export default function EditProjectPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Editar projeto</h1>
-      <ProjectForm
-        defaultValues={project}
-        onSubmit={handleSubmit}
-        isSubmitting={updateProject.isPending}
-      />
+      <PageHeader title="Editar projeto" description={project.name} />
+      <SectionCard title="Dados do projeto">
+        <ProjectForm
+          defaultValues={project}
+          onSubmit={handleSubmit}
+          isSubmitting={updateProject.isPending}
+        />
+      </SectionCard>
     </div>
   );
 }

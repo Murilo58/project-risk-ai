@@ -23,6 +23,7 @@ import {
 import { RiskStatusBadge, SeverityBadge } from "@/components/domain/badges";
 import { EmptyState } from "@/components/domain/empty-state";
 import { RiskForm } from "@/components/domain/risk-form";
+import { SectionCard } from "@/components/domain/section-card";
 import { useCreateRisk, useDeleteRisk, useUpdateRisk } from "@/hooks/use-risks";
 import { ApiError } from "@/lib/api-client";
 import {
@@ -95,89 +96,91 @@ export function RisksSection({ projectId, risks }: { projectId: string; risks: R
   const isSubmitting = createRisk.isPending || updateRisk.isPending;
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Riscos</h2>
+    <SectionCard
+      title="Riscos"
+      action={
         <Button size="sm" onClick={() => setEditing("new")}>
           Adicionar risco
         </Button>
-      </div>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        {risks.length > 0 && (
+          <div className="flex gap-3">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Todas as categorias</SelectItem>
+                {categoryOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Todos os status</SelectItem>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-      {risks.length > 0 && (
-        <div className="flex gap-3">
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todas as categorias</SelectItem>
-              {categoryOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todos os status</SelectItem>
-              {statusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {risks.length === 0 ? (
-        <EmptyState
-          title="Nenhum risco cadastrado"
-          description="Registre os riscos identificados para este projeto."
-        />
-      ) : filteredRisks.length === 0 ? (
-        <EmptyState title="Nenhum risco corresponde aos filtros selecionados" />
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Título</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Severidade</TableHead>
-              <TableHead>Responsável</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRisks.map((risk) => (
-              <TableRow key={risk.id}>
-                <TableCell className="font-medium">{risk.title}</TableCell>
-                <TableCell>{RISK_CATEGORY_LABELS[risk.category]}</TableCell>
-                <TableCell>
-                  <SeverityBadge severity={risk.severity} />
-                </TableCell>
-                <TableCell>{risk.owner}</TableCell>
-                <TableCell>
-                  <RiskStatusBadge value={risk.status} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setEditing(risk)}>
-                    Editar
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(risk)}>
-                    Remover
-                  </Button>
-                </TableCell>
+        {risks.length === 0 ? (
+          <EmptyState
+            title="Nenhum risco cadastrado"
+            description="Registre os riscos identificados para este projeto."
+          />
+        ) : filteredRisks.length === 0 ? (
+          <EmptyState title="Nenhum risco corresponde aos filtros selecionados" />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Título</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead>Severidade</TableHead>
+                <TableHead>Responsável</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+            </TableHeader>
+            <TableBody>
+              {filteredRisks.map((risk) => (
+                <TableRow key={risk.id}>
+                  <TableCell className="font-medium">{risk.title}</TableCell>
+                  <TableCell>{RISK_CATEGORY_LABELS[risk.category]}</TableCell>
+                  <TableCell>
+                    <SeverityBadge severity={risk.severity} />
+                  </TableCell>
+                  <TableCell>{risk.owner}</TableCell>
+                  <TableCell>
+                    <RiskStatusBadge value={risk.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => setEditing(risk)}>
+                      Editar
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(risk)}>
+                      Remover
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
       <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
@@ -191,6 +194,6 @@ export function RisksSection({ projectId, risks }: { projectId: string; risks: R
           />
         </DialogContent>
       </Dialog>
-    </section>
+    </SectionCard>
   );
 }
