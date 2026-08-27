@@ -10,7 +10,7 @@ Case profissional de desenvolvimento assistido por **Claude Code**, da análise 
 
 Consulte o detalhamento em [ROADMAP.md](ROADMAP.md).
 
-![Visão geral do Project Risk AI](documentos/images/Imagem_Projeto_Riscos.png)
+![Visão geral do Project Risk AI](documentos/images/project-risk-ai-overview.png)
 
 ---
 
