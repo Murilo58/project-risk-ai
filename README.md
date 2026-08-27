@@ -405,6 +405,18 @@ Deploy
 O objetivo foi utilizar IA como apoio ao processo de engenharia, mantendo decisões arquiteturais, regras de negócio e critérios de aceite documentados durante o desenvolvimento.
 
 ---
+## 14. Sobre o autor
+
+### Murilo Guimarães Costa
+
+Especialista em Projetos de TI, com atuação em gestão de projetos, entregas, transformação digital e aplicação de Inteligência Artificial em soluções de negócio.
+
+Este projeto faz parte do meu portfólio prático de iniciativas que combinam **Gestão de Projetos, Engenharia Assistida por IA e desenvolvimento de soluções com IA Generativa**.
+
+* **GitHub:** [github.com/Murilo58](https://github.com/Murilo58)
+* **Portfólio:** [orizonprojects.com.br](https://orizonprojects.com.br/)
+* **LinkedIn:** https://www.linkedin.com/in/murilogcosta/
+---
 
 ## 14. Licença
 
@@ -416,5 +428,6 @@ Consulte [LICENSE](LICENSE) para mais informações.
 
 <p align="center">
   <strong>Project Risk AI</strong><br>
-  Project Risk Management powered by Data + AI
+  Project Risk Management powered by Data + AI<br><br>
+  Desenvolvido por <strong>Murilo Guimarães Costa</strong>
 </p>
