@@ -1,0 +1,212 @@
+// Project Risk AI — data model.
+// See ARCHITECTURE.md for the entity-relationship rationale and HEALTH_SCORE.md
+// for how these fields feed the Health Score calculation.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum ProjectStatus {
+  PLANNED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+/// Shared by Project and Dependency; also used to bucket Risk severity bands
+/// for display, even though Risk severity itself is a numeric 1-25 score.
+enum Criticality {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum MilestoneStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DependencyType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum DependencyStatus {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  RESOLVED
+  CANCELLED
+}
+
+enum RiskCategory {
+  SCHEDULE
+  SCOPE
+  RESOURCES
+  TECHNOLOGY
+  EXTERNAL_DEPENDENCY
+  VENDOR
+  INTEGRATION
+  QUALITY
+  BUSINESS
+  OTHER
+}
+
+/// A risk is considered "open" for Health Score purposes when its status is
+/// neither MITIGATED nor CLOSED — see HEALTH_SCORE.md §3 and PRD.md rule 2.
+enum RiskStatus {
+  OPEN
+  MITIGATED
+  CLOSED
+}
+
+enum AiSuggestionType {
+  RISK
+  EXECUTIVE_SUMMARY
+}
+
+enum AiSuggestionStatus {
+  PENDING
+  ACCEPTED
+  DISMISSED
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model Project {
+  id              String        @id @default(cuid())
+  name            String
+  description     String?
+  owner           String
+  startDate       DateTime
+  endDate         DateTime?
+  status          ProjectStatus @default(PLANNED)
+  progressPercent Int           @default(0)
+  teamSize        Int?
+  criticality     Criticality   @default(MEDIUM)
+  notes           String?
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  milestones           Milestone[]
+  dependencies         Dependency[]
+  risks                Risk[]
+  healthScoreSnapshots HealthScoreSnapshot[]
+  aiSuggestions        AiSuggestion[]
+
+  @@index([deletedAt])
+}
+
+model Milestone {
+  id          String          @id @default(cuid())
+  projectId   String
+  description String
+  plannedDate DateTime
+  actualDate  DateTime?
+  status      MilestoneStatus @default(PLANNED)
+  owner       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model Dependency {
+  id          String            @id @default(cuid())
+  projectId   String
+  description String
+  type        DependencyType
+  owner       String
+  criticality Criticality       @default(MEDIUM)
+  status      DependencyStatus  @default(OPEN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model Risk {
+  id                  String       @id @default(cuid())
+  projectId           String
+  title               String
+  description         String?
+  category            RiskCategory
+  probability         Int
+  impact              Int
+  /// Denormalized (probability * impact), recomputed on every write.
+  /// Persisted so it can be queried/sorted/indexed without recalculating
+  /// in application code on every read.
+  severity            Int
+  owner               String
+  mitigationStrategy  String?
+  status              RiskStatus   @default(OPEN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, status])
+}
+
+model HealthScoreSnapshot {
+  id           String   @id @default(cuid())
+  projectId    String
+  snapshotDate DateTime @db.Date
+  overallScore Int
+  /// Full per-dimension breakdown (penalties and sub-scores) — see
+  /// HEALTH_SCORE.md. Kept as JSON because its shape is an internal
+  /// calculation detail, not something other tables need to join against.
+  breakdown    Json
+
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, snapshotDate])
+  @@index([projectId])
+}
+
+model AiSuggestion {
+  id        String             @id @default(cuid())
+  projectId String
+  type      AiSuggestionType
+  /// Structured content returned by Claude, validated with Zod before
+  /// being persisted. Never read directly into Risk/Project — a user
+  /// must explicitly accept it first. See ARCHITECTURE.md §4 and §7.
+  content   Json
+  status    AiSuggestionStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, status])
+}

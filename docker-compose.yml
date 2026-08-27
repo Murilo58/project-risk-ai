@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: project-risk-ai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: project_risk_ai
+      POSTGRES_PASSWORD: project_risk_ai
+      POSTGRES_DB: project_risk_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - project_risk_ai_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U project_risk_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  project_risk_ai_db_data:
