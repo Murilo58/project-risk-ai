@@ -309,15 +309,15 @@ Validações realizadas:
 
 A arquitetura final do MVP utiliza:
 
-| Componente | Serviço |
-|---|---|
-| Código-fonte | GitHub |
-| Aplicação | Vercel |
-| Banco de dados | Neon PostgreSQL |
-| ORM | Prisma |
+| Componente              | Serviço              |
+| ----------------------- | -------------------- |
+| Código-fonte            | GitHub               |
+| Aplicação               | Vercel               |
+| Banco de dados          | Neon PostgreSQL      |
+| ORM                     | Prisma               |
 | Inteligência Artificial | Anthropic Claude API |
-| CI | GitHub Actions |
-| Branch de produção | `main` |
+| CI                      | GitHub Actions       |
+| Branch de produção      | `main`               |
 
 ### Banco de produção
 
@@ -539,21 +539,21 @@ PRD, arquitetura, metodologia do Health Score e roadmap foram mantidos como arte
 
 # Status final
 
-| Área | Status |
-|---|---|
-| Foundation | ✅ Concluído |
-| Project Management | ✅ Concluído |
-| Risk Management | ✅ Concluído |
-| Health Score Engine | ✅ Concluído |
-| Dashboard Executivo | ✅ Concluído |
-| AI Risk Advisor | ✅ Concluído |
-| Testes | ✅ Concluído |
-| CI | ✅ Concluído |
-| Security Review | ✅ Concluído |
-| PostgreSQL Produção | ✅ Concluído |
-| Deploy Vercel | ✅ Concluído |
-| Claude API Produção | ✅ Validado |
-| MVP | 🟢 **Em produção** |
+| Área                | Status             |
+| ------------------- | ------------------ |
+| Foundation          | ✅ Concluído       |
+| Project Management  | ✅ Concluído       |
+| Risk Management     | ✅ Concluído       |
+| Health Score Engine | ✅ Concluído       |
+| Dashboard Executivo | ✅ Concluído       |
+| AI Risk Advisor     | ✅ Concluído       |
+| Testes              | ✅ Concluído       |
+| CI                  | ✅ Concluído       |
+| Security Review     | ✅ Concluído       |
+| PostgreSQL Produção | ✅ Concluído       |
+| Deploy Vercel       | ✅ Concluído       |
+| Claude API Produção | ✅ Validado        |
+| MVP                 | 🟢 **Em produção** |
 
 ---
 

@@ -10,6 +10,8 @@ Case profissional de desenvolvimento assistido por **Claude Code**, da análise 
 
 Consulte o detalhamento em [ROADMAP.md](ROADMAP.md).
 
+![Visão geral do Project Risk AI](documentos/images/Imagem_Projeto_Riscos.png)
+
 ---
 
 ## 1. Problema
@@ -24,9 +26,9 @@ Não existe, necessariamente, um ponto único que consolide sinais como atrasos,
 
 O **Project Risk AI** centraliza informações relevantes do projeto — cronograma, marcos, dependências e riscos — e produz:
 
-* um **Health Score de 0 a 100**, determinístico, explicável e auditável por projeto;
-* um **Dashboard Executivo** para leitura rápida da saúde do portfólio;
-* um **AI Risk Advisor**, integrado à API do Claude, que atua como apoio à decisão e pode identificar potenciais riscos e sugerir estratégias de mitigação.
+- um **Health Score de 0 a 100**, determinístico, explicável e auditável por projeto;
+- um **Dashboard Executivo** para leitura rápida da saúde do portfólio;
+- um **AI Risk Advisor**, integrado à API do Claude, que atua como apoio à decisão e pode identificar potenciais riscos e sugerir estratégias de mitigação.
 
 A Inteligência Artificial não altera automaticamente os dados do projeto. Toda sugestão exige avaliação e confirmação explícita do usuário.
 
@@ -76,19 +78,19 @@ O detalhamento técnico, modelo de dados e decisões arquiteturais estão docume
 
 O MVP contempla:
 
-* gestão de projetos;
-* cadastro e acompanhamento de milestones;
-* gestão de dependências;
-* registro de riscos;
-* cálculo automático de severidade;
-* Health Score com breakdown por dimensão;
-* histórico da evolução do Health Score;
-* Dashboard Executivo;
-* AI Risk Advisor;
-* geração de sugestões de riscos;
-* sugestões de mitigação;
-* fluxo de aceitar ou descartar sugestões da IA;
-* persistência em PostgreSQL.
+- gestão de projetos;
+- cadastro e acompanhamento de milestones;
+- gestão de dependências;
+- registro de riscos;
+- cálculo automático de severidade;
+- Health Score com breakdown por dimensão;
+- histórico da evolução do Health Score;
+- Dashboard Executivo;
+- AI Risk Advisor;
+- geração de sugestões de riscos;
+- sugestões de mitigação;
+- fluxo de aceitar ou descartar sugestões da IA;
+- persistência em PostgreSQL.
 
 O detalhamento completo dos requisitos funcionais RF01–RF09 está disponível em [PRD.md](PRD.md).
 
@@ -119,12 +121,12 @@ O **AI Risk Advisor** foi desenvolvido como um **Decision Support System**.
 
 A Claude API pode:
 
-* identificar potenciais riscos ainda não cadastrados;
-* detectar sinais de deterioração;
-* sugerir estratégias de mitigação;
-* classificar probabilidade e impacto;
-* gerar recomendações;
-* produzir análises executivas.
+- identificar potenciais riscos ainda não cadastrados;
+- detectar sinais de deterioração;
+- sugerir estratégias de mitigação;
+- classificar probabilidade e impacto;
+- gerar recomendações;
+- produzir análises executivas.
 
 Porém, a IA nunca cria, edita ou aprova dados oficiais por conta própria.
 
@@ -182,11 +184,11 @@ As dimensões utilizadas no MVP são:
 
 O cálculo é:
 
-* determinístico;
-* explicável;
-* auditável;
-* reproduzível;
-* independente da IA.
+- determinístico;
+- explicável;
+- auditável;
+- reproduzível;
+- independente da IA.
 
 Pesos, penalizações, regras e exemplos completos estão documentados em [HEALTH_SCORE.md](HEALTH_SCORE.md).
 
@@ -196,11 +198,11 @@ Pesos, penalizações, regras e exemplos completos estão documentados em [HEALT
 
 ### Pré-requisitos
 
-* Node.js 20+
-* npm
-* PostgreSQL local
-* Docker, opcional mas recomendado
-* Anthropic API Key, caso queira testar o AI Risk Advisor
+- Node.js 20+
+- npm
+- PostgreSQL local
+- Docker, opcional mas recomendado
+- Anthropic API Key, caso queira testar o AI Risk Advisor
 
 ### Clone o projeto
 
@@ -367,10 +369,10 @@ Detalhamento completo: [ROADMAP.md](ROADMAP.md).
 
 O projeto possui documentação específica para produto, arquitetura e regras de negócio:
 
-* [PRD.md](PRD.md) — problema, personas, requisitos e escopo do MVP
-* [ARCHITECTURE.md](ARCHITECTURE.md) — arquitetura, stack, modelo de dados e segurança
-* [HEALTH_SCORE.md](HEALTH_SCORE.md) — metodologia matemática do Project Health Score
-* [ROADMAP.md](ROADMAP.md) — fases de desenvolvimento e backlog
+- [PRD.md](PRD.md) — problema, personas, requisitos e escopo do MVP
+- [ARCHITECTURE.md](ARCHITECTURE.md) — arquitetura, stack, modelo de dados e segurança
+- [HEALTH_SCORE.md](HEALTH_SCORE.md) — metodologia matemática do Project Health Score
+- [ROADMAP.md](ROADMAP.md) — fases de desenvolvimento e backlog
 
 ---
 
@@ -414,9 +416,9 @@ Especialista em Projetos de TI, com atuação em gestão de projetos, entregas, 
 
 Este projeto faz parte do meu portfólio prático de iniciativas que combinam **Gestão de Projetos, Engenharia Assistida por IA e desenvolvimento de soluções com IA Generativa**.
 
-* **GitHub:** [github.com/Murilo58](https://github.com/Murilo58)
-* **Portfólio:** [orizonprojects.com.br](https://orizonprojects.com.br/)
-* **LinkedIn:** [linkedin.com/in/murilogcosta](https://www.linkedin.com/in/murilogcosta/)
+- **GitHub:** [github.com/Murilo58](https://github.com/Murilo58)
+- **Portfólio:** [orizonprojects.com.br](https://orizonprojects.com.br/)
+- **LinkedIn:** [linkedin.com/in/murilogcosta](https://www.linkedin.com/in/murilogcosta/)
 
 ---
 
