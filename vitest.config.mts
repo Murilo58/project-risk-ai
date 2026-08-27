@@ -10,5 +10,10 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     exclude: ["node_modules", ".next", "src/generated"],
+    // Integration tests share a single live Postgres database and assert on
+    // global row counts — running test files in parallel lets one file's
+    // create/delete race another's before/after count, causing flaky
+    // failures. Sequential file execution keeps those assertions reliable.
+    fileParallelism: false,
   },
 });
