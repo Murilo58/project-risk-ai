@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { GET, POST } from "@/app/api/projects/route";
+import { PATCH } from "@/app/api/projects/[projectId]/route";
 import { prisma } from "@/lib/prisma";
 
 const createdProjectIds: string[] = [];
@@ -22,6 +23,18 @@ function postRequest(body: unknown): Request {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+function patchRequest(body: unknown): Request {
+  return new Request("http://localhost/api/projects/x", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function makeContext(projectId: string) {
+  return { params: Promise.resolve({ projectId }) };
 }
 
 describe("POST /api/projects", () => {
@@ -59,6 +72,80 @@ describe("POST /api/projects", () => {
 
     const after = await prisma.project.count();
     expect(after).toBe(before);
+  });
+});
+
+describe("PATCH /api/projects/:id", () => {
+  async function createProject() {
+    const project = await prisma.project.create({
+      data: {
+        name: "Integração Meios de Pagamento",
+        owner: "Marina",
+        startDate: new Date("2026-01-10"),
+        status: "IN_PROGRESS",
+        criticality: "HIGH",
+      },
+    });
+    createdProjectIds.push(project.id);
+    return project;
+  }
+
+  it("updates a project with a partial payload (regression: projectSchema.partial() + .refine())", async () => {
+    const project = await createProject();
+
+    const response = await PATCH(
+      patchRequest({ progressPercent: 40 }),
+      makeContext(project.id),
+    );
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body.progressPercent).toBe(40);
+    expect(body.name).toBe(project.name);
+
+    const stored = await prisma.project.findUnique({ where: { id: project.id } });
+    expect(stored?.progressPercent).toBe(40);
+  });
+
+  it("updates every field like the edit form does", async () => {
+    const project = await createProject();
+
+    const response = await PATCH(
+      patchRequest({
+        name: project.name,
+        owner: project.owner,
+        startDate: "2026-01-10",
+        endDate: "2026-06-30",
+        status: "ON_HOLD",
+        progressPercent: 55,
+        criticality: "CRITICAL",
+      }),
+      makeContext(project.id),
+    );
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body.status).toBe("ON_HOLD");
+    expect(body.criticality).toBe("CRITICAL");
+    expect(body.progressPercent).toBe(55);
+  });
+
+  it("still rejects an end date before the start date on partial update", async () => {
+    const project = await createProject();
+
+    const response = await PATCH(
+      patchRequest({ startDate: "2026-06-01", endDate: "2026-01-01" }),
+      makeContext(project.id),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 404 for a project that does not exist", async () => {
+    const response = await PATCH(
+      patchRequest({ progressPercent: 10 }),
+      makeContext("nope"),
+    );
+    expect(response.status).toBe(404);
   });
 });
 

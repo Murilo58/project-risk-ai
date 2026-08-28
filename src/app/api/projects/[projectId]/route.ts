@@ -1,6 +1,6 @@
 import { NotFoundError, toErrorResponse, ValidationError } from "@/lib/api-errors";
 import { prisma } from "@/lib/prisma";
-import { projectSchema } from "@/lib/validation/project";
+import { projectUpdateSchema } from "@/lib/validation/project";
 
 async function findActiveProject(projectId: string) {
   const project = await prisma.project.findFirst({
@@ -37,7 +37,7 @@ export async function PATCH(
     await findActiveProject(projectId);
 
     const body = await request.json();
-    const parsed = projectSchema.partial().safeParse(body);
+    const parsed = projectUpdateSchema.safeParse(body);
     if (!parsed.success) throw new ValidationError(parsed.error);
 
     const project = await prisma.project.update({
