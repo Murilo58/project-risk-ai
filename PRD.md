@@ -93,7 +93,7 @@ A aplicação exige login para acesso a qualquer página ou endpoint funcional, 
 
 ### RF11 — Isolamento de dados por usuário
 
-Todo `Project` tem um proprietário (`userId`) obrigatório. Um usuário só pode listar, visualizar, criar, editar ou excluir projetos — e, por extensão, marcos, dependências, riscos, Health Score e sugestões de IA — que pertençam à sua própria conta. Uma tentativa de acessar um recurso de outro usuário (inclusive manipulando o ID na URL) deve resultar em "não encontrado", nunca em exposição do dado ou do fato de que ele existe.
+Todo `Project` tem um proprietário (`userId`) obrigatório. Um usuário só pode listar, visualizar, criar, editar ou excluir projetos — e, por extensão, marcos, dependências, riscos, Health Score e sugestões de IA — que pertençam à sua própria conta. Uma tentativa de acessar um recurso de outro usuário (inclusive manipulando o ID na URL) deve resultar em "não encontrado", nunca em exposição do dado ou do fato de que ele existe. Essa mesma regra vale para um projeto excluído (soft-delete, RF01): ele e todos os seus recursos ficam congelados contra edição/exclusão mesmo para o próprio dono, não só entre contas diferentes.
 
 ## 8. Requisitos não funcionais
 

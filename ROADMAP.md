@@ -474,12 +474,12 @@ Antes da divulgação pública da Live Demo, foi adicionada uma camada de autent
 - Todas as páginas e endpoints funcionais exigem sessão válida, exceto as telas de cadastro/login e o endpoint de cron (que mantém seu próprio secret).
 - Proteção em duas camadas: `proxy.ts` (checagem otimista, redireciona/nega antes de renderizar) e `requireSession()` dentro de cada Route Handler (checagem que não depende do Proxy).
 - AI Risk Advisor limitado por usuário (20 análises/24h por conta, além do cooldown de 5 min por projeto já existente) para conter consumo da Anthropic API.
-- Migração dos dados existentes: `Project.userId` foi adicionado como opcional, com um script de backfill (`scripts/backfill-project-owner.mjs`) pronto para associar os projetos pré-existentes a um usuário real antes de o campo virar obrigatório — sem perda de dados em nenhuma etapa. Ver `ARCHITECTURE.md` §12 para a sequência completa aplicada em produção.
-- `AUTH_ADMIN_EMAIL`/`AUTH_ADMIN_PASSWORD_HASH` (etapa 1) mantidas na Vercel até a validação completa do novo fluxo em produção; a remoção é um passo separado, deliberadamente posterior.
+- Migração dos dados existentes: `Project.userId` foi adicionado como coluna opcional (migration aplicada em produção) antes de qualquer código passar a exigi-la. Os 7 projetos que já existiam em produção (criados durante desenvolvimento/testes, antes da autenticação existir) foram investigados e confirmados como massa de teste — não dados reais — e removidos por hard delete excepcional direto no banco, com todos os seus registros dependentes. Não houve backfill (`scripts/backfill-project-owner.mjs` permanece disponível para uma futura situação real de migração). Ver `ARCHITECTURE.md` §12 para a sequência completa e o que ainda está pendente (tornar `userId` obrigatório é seguro agora, mas ainda não foi aplicado).
+- `AUTH_ADMIN_EMAIL`/`AUTH_ADMIN_PASSWORD_HASH` (etapa 1) mantidas na Vercel até você autorizar a remoção — o novo fluxo já foi validado de ponta a ponta em produção (cadastro, login, logout, sessão, isolamento entre contas), mas a remoção continua sendo um passo separado, deliberadamente posterior.
 
 Detalhamento técnico completo em `ARCHITECTURE.md` §12 e a regra de produto em `PRD.md` (RF10/RF11).
 
-**Status:** Implementação e testes concluídos; migração de dados e validação em produção pendentes de autorização explícita antes de commit/push/deploy.
+**Status:** Implementação, testes e validação em produção concluídos (cadastro, login, logout, sessão, isolamento entre usuários e limpeza dos dados de teste legados, tudo confirmado ao vivo). Pendente: aplicar a segunda migration (`userId` obrigatório — já segura, banco sem projetos órfãos) e, só depois de você autorizar, remover `AUTH_ADMIN_EMAIL`/`AUTH_ADMIN_PASSWORD_HASH` da Vercel.
 
 ---
 

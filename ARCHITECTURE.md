@@ -316,17 +316,19 @@ A primeira versão desta camada (ver histórico do repositório) era single-admi
 ### Isolamento de dados por usuário
 
 - `Project.userId` (obrigatório, FK para `User`, `onDelete: Cascade`) é a fonte única de verdade sobre a posse de um projeto. `Milestone`, `Dependency`, `Risk`, `HealthScoreSnapshot` e `AiSuggestion` não têm `userId` próprio — a posse é herdada do `Project` ao qual pertencem via `projectId`.
-- Toda consulta de projeto (listagem, detalhe, edição, exclusão) filtra por `userId` da sessão. Todo acesso a um recurso filho "por ID" (marco, dependência, risco, sugestão de IA) verifica a posse via filtro de relação (`where: { project: { userId } }`) antes de retornar ou alterar qualquer coisa.
+- Toda consulta de projeto (listagem, detalhe, edição, exclusão) filtra por `userId` da sessão **e** `deletedAt: null`. Todo acesso a um recurso filho "por ID" (marco, dependência, risco, sugestão de IA) verifica a posse via filtro de relação `where: { project: { userId, deletedAt: null } }` antes de retornar ou alterar qualquer coisa — a checagem de `deletedAt` fica embutida na própria operação, não depende de quem chama já ter filtrado antes.
+- Um projeto com soft-delete fica congelado por completo, inclusive para o próprio dono: seus marcos, dependências, riscos e sugestões de IA não podem mais ser editados, excluídos ou processados diretamente por ID (não é só uma questão de esconder da listagem — a mutação em si é recusada com 404). Isso vale mesmo que o usuário já conheça o ID do recurso de antes da exclusão do projeto.
 - Uma tentativa de acessar o recurso de outro usuário — inclusive trocando o ID na URL — retorna **404**, não 403: o sistema nunca confirma que o recurso existe para quem não é dono dele.
-- O cron de snapshot diário (`snapshotAllActiveProjects`) continua percorrendo todos os projetos de todos os usuários — é um job de sistema, não uma operação de um usuário específico, e permanece protegido só por `CRON_SECRET`.
+- O cron de snapshot diário (`snapshotAllActiveProjects`) continua percorrendo todos os projetos ativos (`deletedAt: null`) de todos os usuários — é um job de sistema, não uma operação de um usuário específico, e permanece protegido só por `CRON_SECRET`.
 
 ### Migração dos dados existentes
 
-Como já havia projetos em produção antes da tabela `User` existir, `Project.userId` foi introduzido em duas migrations (nunca uma só, para não apagar nem quebrar nada):
+Como já havia projetos em produção antes da tabela `User` existir, `Project.userId` foi introduzido em duas migrations, deliberadamente separadas para nunca arriscar apagar ou quebrar nada:
 
-1. `20260828100000_add_user_table` — cria `User`; adiciona `Project.userId` **opcional**. Nenhum comportamento muda ainda.
-2. Um usuário real é criado via `/signup`; `scripts/backfill-project-owner.mjs` associa todo `Project` com `userId IS NULL` a esse usuário (idempotente — só afeta linhas ainda sem dono).
-3. `20260828110000_require_project_owner` — só depois do backfill confirmado (zero linhas `NULL`) — marca `userId` como `NOT NULL`. Aplicar essa migration antes do backfill falha imediatamente contra linhas existentes, por design.
+1. `20260828100000_add_user_table` — cria `User`; adiciona `Project.userId` **opcional**. Nenhum comportamento muda ainda. **Aplicada em produção.**
+2. `20260828110000_require_project_owner` — marca `userId` como `NOT NULL`. Só pode ser aplicada depois de zero linhas com `userId IS NULL`, por design (a migration falha imediatamente contra linhas existentes, o que é intencional). **Ainda não aplicada em produção** — hoje a coluna segue opcional no banco, embora o schema/Prisma Client já a tratem como obrigatória; é segura de aplicar a qualquer momento, já que não há mais nenhum projeto órfão (ver abaixo).
+
+`scripts/backfill-project-owner.mjs` existe para o caso geral de associar projetos pré-existentes a uma conta real antes do passo 2 — mas não foi essa a situação encontrada aqui: os 7 projetos que existiam em produção antes da tabela `User` (criados durante o desenvolvimento/testes anteriores à autenticação, quando a aplicação ainda era pública) foram identificados como massa de teste (nomes/descrições como "Teste", responsável repetido igual ao nome de quem testava, a maioria já removida via soft-delete pela própria aplicação) e confirmados como não sendo dados reais. Por decisão explícita, esses 7 projetos e todos os seus registros dependentes (marcos, dependências, riscos, snapshots de Health Score, sugestões de IA) foram removidos por **hard delete excepcional, direto no banco** — não pelo fluxo normal da aplicação, que continua sendo soft-delete —, deixando o banco de produção sem nenhum projeto órfão. O script de backfill permanece disponível caso uma situação real de migração de dados apareça no futuro.
 
 ### Proteção do AI Risk Advisor contra abuso
 
