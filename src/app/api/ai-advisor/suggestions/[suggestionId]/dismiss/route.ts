@@ -1,11 +1,14 @@
 import { decideSuggestion } from "@/domain/ai-advisor/service";
 import { toErrorResponse } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/ai-advisor/suggestions/[suggestionId]/dismiss">,
 ) {
   try {
+    await requireSession(request);
+
     const { suggestionId } = await ctx.params;
     const suggestion = await decideSuggestion(suggestionId, "DISMISSED");
     return Response.json(suggestion);

@@ -4,12 +4,15 @@ import {
 } from "@/domain/ai-advisor/claudeClient";
 import { AiAdvisorCooldownError, requestAiAnalysis } from "@/domain/ai-advisor/service";
 import { toErrorResponse } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/projects/[projectId]/ai-advisor">,
 ) {
   try {
+    await requireSession(request);
+
     const { projectId } = await ctx.params;
     const suggestions = await requestAiAnalysis(projectId);
     return Response.json(suggestions, { status: 201 });

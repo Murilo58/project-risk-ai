@@ -1,5 +1,6 @@
 import { computeSeverity } from "@/domain/risks/severity";
 import { NotFoundError, toErrorResponse, ValidationError } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { riskSchema } from "@/lib/validation/risk";
 
@@ -12,10 +13,12 @@ async function assertActiveProject(projectId: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/projects/[projectId]/risks">,
 ) {
   try {
+    await requireSession(request);
+
     const { projectId } = await ctx.params;
     await assertActiveProject(projectId);
 
@@ -34,6 +37,8 @@ export async function POST(
   ctx: RouteContext<"/api/projects/[projectId]/risks">,
 ) {
   try {
+    await requireSession(request);
+
     const { projectId } = await ctx.params;
     await assertActiveProject(projectId);
 

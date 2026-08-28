@@ -4,9 +4,9 @@
 
 Case profissional de desenvolvimento assistido por **Claude Code**, da análise de produto e arquitetura à implementação, testes, hardening e publicação em produção, com as principais decisões documentadas ao longo do projeto.
 
-🚀 **Live Demo:** https://project-risk-ai.vercel.app/
+🚀 **Live Demo:** https://project-risk-ai.vercel.app/ (requer login — ver seção [Autenticação](#7-autenticação))
 
-**Status atual: MVP concluído e publicado em produção. As 7 fases previstas no roadmap foram executadas, incluindo testes, CI, revisão de segurança, integração com Claude API, banco PostgreSQL em produção e deploy na Vercel.**
+**Status atual: MVP concluído e publicado em produção. As 7 fases previstas no roadmap foram executadas, incluindo testes, CI, revisão de segurança, integração com Claude API, banco PostgreSQL em produção e deploy na Vercel. Uma camada de autenticação foi adicionada em seguida para proteger o acesso público — ver [ROADMAP.md](ROADMAP.md).**
 
 Consulte o detalhamento em [ROADMAP.md](ROADMAP.md).
 
@@ -78,6 +78,7 @@ O detalhamento técnico, modelo de dados e decisões arquiteturais estão docume
 
 O MVP contempla:
 
+- login single-admin, com todas as páginas e endpoints funcionais protegidos por sessão;
 - gestão de projetos;
 - cadastro e acompanhamento de milestones;
 - gestão de dependências;
@@ -154,7 +155,19 @@ Detalhes de integração, tratamento de erros, timeout e controle de chamadas es
 
 ---
 
-## 7. Health Score
+## 7. Autenticação
+
+A aplicação exige login para acessar qualquer página ou endpoint funcional — a única rota pública é a própria tela de login.
+
+- Login **single-admin** (e-mail/senha de um único usuário), sem cadastro público, sem tabela `User` no banco — o usuário autorizado é provisionado por variáveis de ambiente.
+- Sessão mantida por um cookie assinado (`httpOnly`, `Secure` em produção), sem tabela de sessões.
+- Logout invalida a sessão e impede novo acesso às áreas privadas sem novo login.
+
+Não é um sistema de IAM completo: sem multiusuário, sem recuperação de senha, sem login social, sem RBAC — ver o que fica fora do escopo em [PRD.md](PRD.md). Detalhamento técnico completo (Proxy, sessão, hashing de senha) em [ARCHITECTURE.md](ARCHITECTURE.md) §12.
+
+---
+
+## 8. Health Score
 
 O **Project Health Score** utiliza uma metodologia matemática determinística, sem participação de IA no cálculo.
 
@@ -194,7 +207,7 @@ Pesos, penalizações, regras e exemplos completos estão documentados em [HEALT
 
 ---
 
-## 8. Como executar localmente
+## 9. Como executar localmente
 
 ### Pré-requisitos
 
@@ -226,6 +239,14 @@ cp .env.example .env
 ```
 
 Configure as variáveis necessárias no `.env`.
+
+Para gerar `AUTH_ADMIN_PASSWORD_HASH` (nunca a senha em texto puro):
+
+```bash
+node scripts/hash-password.mjs
+```
+
+Cole o e-mail escolhido em `AUTH_ADMIN_EMAIL` e o hash gerado em `AUTH_ADMIN_PASSWORD_HASH`.
 
 ### Banco de dados — opção A: Docker
 
@@ -277,7 +298,7 @@ http://localhost:3000
 
 ---
 
-## 9. Configuração
+## 10. Configuração
 
 As variáveis de ambiente são documentadas em [`.env.example`](.env.example).
 
@@ -288,6 +309,9 @@ DATABASE_URL=
 ANTHROPIC_API_KEY=
 ANTHROPIC_MODEL=
 CRON_SECRET=
+AUTH_SECRET=
+AUTH_ADMIN_EMAIL=
+AUTH_ADMIN_PASSWORD_HASH=
 ```
 
 ### `DATABASE_URL`
@@ -308,11 +332,23 @@ Define o modelo Claude utilizado pelo AI Risk Advisor.
 
 Protege o endpoint utilizado para geração automática de snapshots do Health Score.
 
+### `AUTH_SECRET`
+
+Segredo usado para assinar o cookie de sessão (JWT). Gere um valor aleatório, ex.: `openssl rand -base64 32`.
+
+### `AUTH_ADMIN_EMAIL`
+
+E-mail do único usuário autorizado a fazer login.
+
+### `AUTH_ADMIN_PASSWORD_HASH`
+
+Hash `scrypt` da senha do administrador (formato `salt:hash`), gerado localmente com `node scripts/hash-password.mjs`. Nunca a senha em texto puro.
+
 > Nenhuma credencial real deve ser versionada no GitHub. O arquivo `.env` está incluído no `.gitignore`.
 
 ---
 
-## 10. Deploy
+## 11. Deploy
 
 O **Project Risk AI está publicado em produção**.
 
@@ -345,7 +381,7 @@ Novos pushes na branch principal podem gerar novos deployments, mantendo a URL d
 
 ---
 
-## 11. Roadmap
+## 12. Roadmap
 
 O desenvolvimento foi estruturado incrementalmente em sete fases:
 
@@ -365,7 +401,7 @@ Detalhamento completo: [ROADMAP.md](ROADMAP.md).
 
 ---
 
-## 12. Documentação
+## 13. Documentação
 
 O projeto possui documentação específica para produto, arquitetura e regras de negócio:
 
@@ -376,7 +412,7 @@ O projeto possui documentação específica para produto, arquitetura e regras d
 
 ---
 
-## 13. Desenvolvimento assistido por IA
+## 14. Desenvolvimento assistido por IA
 
 Além de sua finalidade como produto, o **Project Risk AI** também foi desenvolvido como um case prático de **AI-assisted software engineering**.
 
@@ -408,7 +444,7 @@ O objetivo foi utilizar IA como apoio ao processo de engenharia, mantendo decis�
 
 ---
 
-## 14. Sobre o autor
+## 15. Sobre o autor
 
 ### Murilo Guimarães Costa
 
@@ -422,7 +458,7 @@ Este projeto faz parte do meu portfólio prático de iniciativas que combinam **
 
 ---
 
-## 15. Licença
+## 16. Licença
 
 Este projeto é distribuído sob a licença **MIT**.
 

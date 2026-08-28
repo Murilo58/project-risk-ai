@@ -2,13 +2,19 @@
 // Postgres database (see DATABASE_URL — local `.env` or the CI Postgres
 // service). Route Handlers are plain async functions, so we can call them
 // directly with a Request object, no HTTP server needed.
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { POST } from "@/app/api/projects/[projectId]/milestones/route";
 import { PATCH } from "@/app/api/milestones/[milestoneId]/route";
 import { prisma } from "@/lib/prisma";
+import { authCookieHeader } from "@/test/auth";
 
 const createdProjectIds: string[] = [];
+let cookie: string;
+
+beforeAll(async () => {
+  cookie = await authCookieHeader();
+});
 
 afterEach(async () => {
   if (createdProjectIds.length > 0) {
@@ -34,7 +40,7 @@ async function createProject() {
 function postRequest(body: unknown): Request {
   return new Request("http://localhost/api/projects/x/milestones", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify(body),
   });
 }
@@ -42,7 +48,7 @@ function postRequest(body: unknown): Request {
 function patchRequest(body: unknown): Request {
   return new Request("http://localhost/api/milestones/x", {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify(body),
   });
 }
@@ -70,6 +76,25 @@ describe("POST /api/projects/:projectId/milestones", () => {
     );
 
     expect(response.status).toBe(400);
+  });
+
+  it("returns 401 without a valid session", async () => {
+    const project = await createProject();
+
+    const response = await POST(
+      new Request("http://localhost/api/projects/x/milestones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: "Entrega piloto",
+          plannedDate: "2026-02-01",
+          owner: "João",
+        }),
+      }),
+      projectContext(project.id),
+    );
+
+    expect(response.status).toBe(401);
   });
 });
 

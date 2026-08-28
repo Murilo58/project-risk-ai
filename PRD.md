@@ -87,6 +87,10 @@ Endpoint que, a partir dos dados atuais de um projeto, chama a API do Claude (no
 
 Toda tela que depende de dados assíncronos deve tratar explicitamente: carregando, vazio (sem dados ainda) e erro.
 
+### RF10 — Autenticação (single-admin)
+
+A aplicação exige login para acesso a qualquer página ou endpoint funcional, exceto a própria tela de login. Login por e-mail/senha de um único usuário administrador, provisionado via variáveis de ambiente (sem cadastro público, sem tabela `User` — ver `ARCHITECTURE.md` §12). Sessão mantida por cookie assinado (`httpOnly`, `Secure` em produção); logout invalida a sessão e impede novo acesso sem login. Adicionada para proteger a Live Demo pública antes da divulgação do MVP — não é um sistema de gestão de identidade multiusuário.
+
 ## 8. Requisitos não funcionais
 
 - **RNF01 — Determinismo do Health Score**: o cálculo não pode depender de IA nem de qualquer fonte não determinística; mesma entrada → mesma saída, sempre.
@@ -123,11 +127,11 @@ Toda tela que depende de dados assíncronos deve tratar explicitamente: carregan
 
 ## 11. Escopo do MVP
 
-Inclui: RF01–RF09 conforme descrito acima, sem autenticação (single-tenant, campos de responsável como texto livre), com um único ambiente/workspace.
+Inclui: RF01–RF10 conforme descrito acima. Autenticação é single-admin (RF10), não multiusuário — a aplicação continua single-tenant, com campos de responsável como texto livre e um único ambiente/workspace.
 
 ## 12. Fora do escopo (nesta fase)
 
-- Autenticação/autorização multiusuário e multi-tenant.
+- Cadastro público de usuários, múltiplas contas, recuperação de senha, login social, RBAC e multi-tenancy (RF10 cobre apenas login single-admin).
 - Notificações (e-mail, Slack, push).
 - Exportação de relatórios (PDF/Excel).
 - Anexos de arquivos em riscos/marcos.

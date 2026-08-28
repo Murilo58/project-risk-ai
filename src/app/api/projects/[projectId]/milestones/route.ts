@@ -1,4 +1,5 @@
 import { NotFoundError, toErrorResponse, ValidationError } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { milestoneSchema, withNormalizedActualDate } from "@/lib/validation/milestone";
 
@@ -11,10 +12,12 @@ async function assertActiveProject(projectId: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/projects/[projectId]/milestones">,
 ) {
   try {
+    await requireSession(request);
+
     const { projectId } = await ctx.params;
     await assertActiveProject(projectId);
 
@@ -33,6 +36,8 @@ export async function POST(
   ctx: RouteContext<"/api/projects/[projectId]/milestones">,
 ) {
   try {
+    await requireSession(request);
+
     const { projectId } = await ctx.params;
     await assertActiveProject(projectId);
 

@@ -2,13 +2,19 @@
 // Postgres database (see DATABASE_URL — local `.env` or the CI Postgres
 // service). Route Handlers are plain async functions, so we can call them
 // directly with a Request object, no HTTP server needed.
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { GET, POST } from "@/app/api/projects/route";
 import { PATCH } from "@/app/api/projects/[projectId]/route";
 import { prisma } from "@/lib/prisma";
+import { authCookieHeader } from "@/test/auth";
 
 const createdProjectIds: string[] = [];
+let cookie: string;
+
+beforeAll(async () => {
+  cookie = await authCookieHeader();
+});
 
 afterEach(async () => {
   if (createdProjectIds.length > 0) {
@@ -17,10 +23,14 @@ afterEach(async () => {
   }
 });
 
+function getRequest(): Request {
+  return new Request("http://localhost/api/projects", { headers: { Cookie: cookie } });
+}
+
 function postRequest(body: unknown): Request {
   return new Request("http://localhost/api/projects", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify(body),
   });
 }
@@ -28,7 +38,7 @@ function postRequest(body: unknown): Request {
 function patchRequest(body: unknown): Request {
   return new Request("http://localhost/api/projects/x", {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify(body),
   });
 }
@@ -161,9 +171,14 @@ describe("GET /api/projects", () => {
     });
     createdProjectIds.push(created.id);
 
-    const response = await GET();
+    const response = await GET(getRequest());
     const body = await response.json();
 
     expect(body.some((p: { id: string }) => p.id === created.id)).toBe(false);
+  });
+
+  it("returns 401 without a valid session", async () => {
+    const response = await GET(new Request("http://localhost/api/projects"));
+    expect(response.status).toBe(401);
   });
 });

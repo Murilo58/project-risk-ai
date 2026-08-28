@@ -1,11 +1,14 @@
 import { calculateHealthScore, isMilestoneLate } from "@/domain/health-score/calculate";
 import { isRiskOpen, severityBand } from "@/domain/risks/severity";
 import { toErrorResponse } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 import type { HealthBand } from "@/lib/enums";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    await requireSession(request);
+
     const projects = await prisma.project.findMany({
       where: { deletedAt: null },
       include: { milestones: true, dependencies: true, risks: true },

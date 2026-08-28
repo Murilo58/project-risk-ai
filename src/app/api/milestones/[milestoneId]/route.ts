@@ -1,4 +1,5 @@
 import { NotFoundError, toErrorResponse, ValidationError } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import {
   milestoneUpdateSchema,
@@ -16,6 +17,8 @@ export async function PATCH(
   ctx: RouteContext<"/api/milestones/[milestoneId]">,
 ) {
   try {
+    await requireSession(request);
+
     const { milestoneId } = await ctx.params;
     const existing = await findMilestone(milestoneId);
 
@@ -36,10 +39,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/milestones/[milestoneId]">,
 ) {
   try {
+    await requireSession(request);
+
     const { milestoneId } = await ctx.params;
     await findMilestone(milestoneId);
 

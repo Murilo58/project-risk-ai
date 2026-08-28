@@ -1,4 +1,5 @@
 import { NotFoundError, toErrorResponse, ValidationError } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { projectUpdateSchema } from "@/lib/validation/project";
 
@@ -16,10 +17,12 @@ async function findActiveProject(projectId: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/projects/[projectId]">,
 ) {
   try {
+    await requireSession(request);
+
     const { projectId } = await ctx.params;
     const project = await findActiveProject(projectId);
     return Response.json(project);
@@ -33,6 +36,8 @@ export async function PATCH(
   ctx: RouteContext<"/api/projects/[projectId]">,
 ) {
   try {
+    await requireSession(request);
+
     const { projectId } = await ctx.params;
     await findActiveProject(projectId);
 
@@ -51,10 +56,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/projects/[projectId]">,
 ) {
   try {
+    await requireSession(request);
+
     const { projectId } = await ctx.params;
     await findActiveProject(projectId);
 

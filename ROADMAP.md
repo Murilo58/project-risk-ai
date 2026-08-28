@@ -460,17 +460,33 @@ O MVP combina:
 
 ---
 
+# Pós-MVP — Autenticação
+
+Antes da divulgação pública da Live Demo, foi adicionada uma camada de autenticação para proteger o acesso à aplicação e às operações que consomem a Claude API.
+
+- Login single-admin (e-mail/senha), sem cadastro público, sem tabela `User` — usuário provisionado via variáveis de ambiente (`AUTH_ADMIN_EMAIL`, `AUTH_ADMIN_PASSWORD_HASH`).
+- Sessão stateless em cookie assinado (JWT HS256 via `jose`), sem tabela de sessões.
+- Todas as páginas e endpoints funcionais exigem sessão válida, exceto a tela de login e o endpoint de cron (que mantém seu próprio secret).
+- Proteção em duas camadas: `proxy.ts` (checagem otimista, redireciona/nega antes de renderizar) e `requireSession()` dentro de cada Route Handler (checagem que não depende do Proxy).
+- Sem alteração no schema Prisma — zero migration.
+
+Detalhamento técnico completo em `ARCHITECTURE.md` §12 e a regra de produto em `PRD.md` (RF10).
+
+**Status:** Concluída.
+
+---
+
 # Além do MVP
 
 As seguintes evoluções permanecem como **backlog e não fazem parte do escopo atual comprometido**.
 
 ## Produto e colaboração
 
-- Autenticação.
-- Gestão real de usuários.
+- Cadastro público de usuários e gestão real de usuários (hoje: login single-admin via variáveis de ambiente — ver "Pós-MVP — Autenticação" acima).
 - Multiusuário.
-- Controle de acesso.
+- Controle de acesso (RBAC).
 - Multi-tenancy.
+- Recuperação de senha e login social.
 
 ## Gestão de projetos
 

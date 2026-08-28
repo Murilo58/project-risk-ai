@@ -1,5 +1,6 @@
 import { computeSeverity } from "@/domain/risks/severity";
 import { NotFoundError, toErrorResponse, ValidationError } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { riskSchema } from "@/lib/validation/risk";
 
@@ -11,6 +12,8 @@ async function findRisk(riskId: string) {
 
 export async function PATCH(request: Request, ctx: RouteContext<"/api/risks/[riskId]">) {
   try {
+    await requireSession(request);
+
     const { riskId } = await ctx.params;
     const existing = await findRisk(riskId);
 
@@ -31,11 +34,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/risks/[ris
   }
 }
 
-export async function DELETE(
-  _request: Request,
-  ctx: RouteContext<"/api/risks/[riskId]">,
-) {
+export async function DELETE(request: Request, ctx: RouteContext<"/api/risks/[riskId]">) {
   try {
+    await requireSession(request);
+
     const { riskId } = await ctx.params;
     await findRisk(riskId);
 

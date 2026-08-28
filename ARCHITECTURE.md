@@ -28,6 +28,7 @@ A separação física front/back só se justificaria se houvéssemos previsto m�
 | ORM                           | Prisma                                 | Migrations versionadas, tipos gerados a partir do schema, boa DX com Postgres                         |
 | Banco de dados                | PostgreSQL                             | Relacional, adequado ao modelo de entidades com relações claras; free tier disponível (Neon/Supabase) |
 | IA                            | Anthropic SDK (`@anthropic-ai/sdk`)    | Chamado só em Route Handlers do servidor                                                              |
+| Autenticação                  | `jose` (JWT assinado, HS256)           | Sessão stateless em cookie httpOnly; sem tabela `User`, sem biblioteca de IAM completa — ver §9       |
 | Testes unitários              | Vitest                                 | Rápido, boa integração com TS/Vite                                                                    |
 | Testes de componente          | React Testing Library                  | Padrão de mercado para React                                                                          |
 | Lint/format                   | ESLint + Prettier                      | Consistência de código                                                                                |
@@ -183,7 +184,7 @@ erDiagram
 - **`AiSuggestion.content`** guarda o JSON estruturado retornado pela IA (título, descrição, categoria, probabilidade/impacto sugeridos, mitigação sugerida) — nunca é lido diretamente como um `Risk`. Uma tela de revisão transforma isso em um formulário pré-preenchido de criação de risco.
 - **`AiSuggestion.status`**: `pending` | `accepted` | `dismissed`. Ao aceitar, o backend cria o `Risk` real a partir dos dados confirmados pelo usuário (que pode editar antes de salvar) e marca a sugestão como `accepted`.
 - **`HealthScoreSnapshot.breakdown`** guarda o detalhamento por dimensão (Prazo, Escopo, Dependências, Recursos, Riscos) e as penalizações que geraram o `overallScore` — é o que torna o score auditável (ver `HEALTH_SCORE.md`).
-- Sem tabela `User` no MVP (decisão aprovada): `owner` em `Project`, `Milestone` e `Dependency`, e `owner` em `Risk`, são campos de texto livre. Isso é intencional para não implementar autenticação prematuramente; a migração futura adiciona uma tabela `User` e substitui os campos de texto por FKs sem quebrar o histórico (o texto livre vira um valor de fallback/display).
+- Sem tabela `User` no MVP (decisão aprovada, mantida mesmo após a adição de autenticação — ver §9): `owner` em `Project`, `Milestone` e `Dependency`, e `owner` em `Risk`, são campos de texto livre. O único usuário autorizado a fazer login é provisionado via variáveis de ambiente, não por uma linha de banco de dados. Uma futura evolução multiusuário adicionaria uma tabela `User` e substituiria os campos de texto por FKs sem quebrar o histórico (o texto livre vira um valor de fallback/display).
 
 ## 5. Fluxo de arquitetura
 
@@ -256,12 +257,12 @@ Todas as rotas de escrita validam o corpo da requisição com Zod antes de tocar
 
 ## 8. Segurança
 
-- Variáveis sensíveis (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `CRON_SECRET`) apenas em `.env` (local, git-ignorado) e nas env vars da Vercel; `.env.example` documenta as chaves sem valores reais.
+- Variáveis sensíveis (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `CRON_SECRET`, `AUTH_SECRET`, `AUTH_ADMIN_EMAIL`, `AUTH_ADMIN_PASSWORD_HASH`) apenas em `.env` (local, git-ignorado) e nas env vars da Vercel; `.env.example` documenta as chaves sem valores reais.
 - Validação de entrada com Zod em toda rota de API antes de qualquer escrita no banco.
 - Prisma como camada de acesso a dados elimina SQL injection por construção (queries parametrizadas).
 - Sem `dangerouslySetInnerHTML`; toda renderização de texto do usuário (inclusive conteúdo vindo da IA) passa pelo escaping padrão do React.
-- Endpoint de cron (`/api/cron/health-snapshot`) protegido por um secret compartilhado (header verificado no handler), não exposto publicamente sem autenticação.
-- Sem autenticação de usuário no MVP (decisão aprovada); estrutura preparada para adicionar (tabela `User`, middleware de sessão) sem redesenho do restante do sistema.
+- Endpoint de cron (`/api/cron/health-snapshot`) protegido por um secret compartilhado (header verificado no handler), independente da autenticação de usuário (ver §12) — não é uma rota acessada por um usuário logado.
+- Autenticação de usuário via sessão assinada em cookie (ver §12), com todas as páginas e endpoints funcionais exigindo sessão válida, exceto a própria tela de login e o endpoint de cron.
 - Dependências mantidas atualizadas via Dependabot/`npm audit` (recomendado configurar no GitHub).
 
 ## 9. Tratamento de erros
@@ -285,3 +286,15 @@ Todas as rotas de escrita validam o corpo da requisição com Zod antes de tocar
 - **Migrations**: `prisma migrate deploy` executado como parte do pipeline de deploy (build step na Vercel ou GitHub Action prévia).
 - **Cron do snapshot diário**: Vercel Cron (free tier permite execução diária), chamando `/api/cron/health-snapshot`.
 - **CI (GitHub Actions, Fase 7)**: lint + typecheck + testes em cada PR antes de permitir merge.
+
+## 12. Autenticação (MVP)
+
+Adicionada após a publicação inicial do MVP para proteger a Live Demo pública, sem transformar o projeto em uma implementação de IAM completa (sem cadastro público, sem RBAC, sem multi-tenancy — ver `PRD.md` §9 e `ROADMAP.md`).
+
+- **Sem tabela `User`** (decisão mantida — ver §4): existe um único usuário administrador, provisionado inteiramente por variáveis de ambiente (`AUTH_ADMIN_EMAIL`, `AUTH_ADMIN_PASSWORD_HASH`). A senha nunca é armazenada em texto puro — `AUTH_ADMIN_PASSWORD_HASH` é gerada localmente com `scrypt` (nativo do Node, sem dependência extra) via `scripts/hash-password.mjs`.
+- **Sessão stateless assinada**: um cookie `httpOnly`, `Secure` em produção, `SameSite=Lax` guarda um JWT (HS256, `jose`) assinado com `AUTH_SECRET`, válido por 7 dias. Não há tabela de sessões — validar a sessão é apenas verificar a assinatura e a expiração do token, sem consulta ao banco.
+- **Proxy** (`src/proxy.ts` — este Next.js renomeou `middleware.ts` para `proxy.ts`, mesma função, ver `node_modules/next/dist/docs/.../proxy.md`): roda em todas as rotas (runtime Node.js, padrão desta versão do Next.js) e faz a checagem "otimista" — sem sessão válida, redireciona páginas para `/login` e responde `401` a chamadas de API, exceto a própria `/login`, `/api/auth/login` e `/api/cron/health-snapshot` (que mantém seu próprio secret, independente de sessão de usuário).
+- **Defesa em profundidade nos Route Handlers**: o Proxy sozinho não é a única proteção — cada Route Handler funcional (`projects`, `milestones`, `dependencies`, `risks`, `health-score`, `ai-advisor`, `dashboard`) chama `requireSession(request)` (`src/lib/auth/dal.ts`) no início do handler, lendo o cookie diretamente do header `Cookie` da própria `Request` (não via `next/headers`), o que também mantém os Route Handlers testáveis chamando-os diretamente, como já era feito nos testes de integração existentes.
+- **Login/logout**: `POST /api/auth/login` valida e-mail/senha (Zod + `scrypt`, com verificação em tempo constante mesmo para e-mail desconhecido, para não vazar por timing se a conta existe) e emite o cookie de sessão; `POST /api/auth/logout` limpa o cookie. Nenhum dos dois exige sessão prévia.
+- **Tela de login** (`/login`, única página pública): formulário e-mail/senha no mesmo padrão visual navy/slate da aplicação, com estado de carregamento e mensagem de erro genérica ("E-mail ou senha inválidos.") para não revelar qual campo está incorreto.
+- **Sem alteração no schema Prisma**: zero migration — a autenticação é inteiramente orquestrada fora do banco de dados.

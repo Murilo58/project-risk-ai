@@ -1,4 +1,5 @@
 import { NotFoundError, toErrorResponse, ValidationError } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { dependencySchema } from "@/lib/validation/dependency";
 
@@ -13,6 +14,8 @@ export async function PATCH(
   ctx: RouteContext<"/api/dependencies/[dependencyId]">,
 ) {
   try {
+    await requireSession(request);
+
     const { dependencyId } = await ctx.params;
     await findDependency(dependencyId);
 
@@ -31,10 +34,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/dependencies/[dependencyId]">,
 ) {
   try {
+    await requireSession(request);
+
     const { dependencyId } = await ctx.params;
     await findDependency(dependencyId);
 

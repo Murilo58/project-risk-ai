@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -12,6 +14,18 @@ const NAV_LINKS = [
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  if (pathname === "/login") return null;
+
+  async function handleLogout() {
+    await api.post("/api/auth/logout", {});
+    // A stale client-side cache after this point is harmless: `proxy.ts`
+    // redirects any protected page straight back to /login once the
+    // session cookie is gone, before that cache could ever be shown.
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header className="bg-primary text-primary-foreground">
@@ -38,6 +52,15 @@ export function SiteHeader() {
               </Link>
             );
           })}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void handleLogout()}
+            className="ml-1 text-blue-100 hover:bg-white/10 hover:text-white"
+          >
+            Sair
+          </Button>
         </nav>
       </div>
     </header>

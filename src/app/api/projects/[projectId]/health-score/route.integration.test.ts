@@ -1,12 +1,18 @@
 // Integration test: create a real project + risk, then verify the
 // Health Score route reflects it and persists a snapshot — exercising the
 // Route Handler, the domain engine, and Prisma together.
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { GET } from "@/app/api/projects/[projectId]/health-score/route";
 import { prisma } from "@/lib/prisma";
+import { authCookieHeader } from "@/test/auth";
 
 let projectId: string | null = null;
+let cookie: string;
+
+beforeAll(async () => {
+  cookie = await authCookieHeader();
+});
 
 afterEach(async () => {
   if (projectId) {
@@ -39,7 +45,10 @@ describe("GET /api/projects/:id/health-score", () => {
       },
     });
 
-    const response = await GET(new Request("http://localhost"), makeContext(project.id));
+    const response = await GET(
+      new Request("http://localhost", { headers: { Cookie: cookie } }),
+      makeContext(project.id),
+    );
     expect(response.status).toBe(200);
 
     const body = await response.json();
@@ -55,9 +64,14 @@ describe("GET /api/projects/:id/health-score", () => {
 
   it("returns 404 for a project that does not exist", async () => {
     const response = await GET(
-      new Request("http://localhost"),
+      new Request("http://localhost", { headers: { Cookie: cookie } }),
       makeContext("nonexistent-id"),
     );
     expect(response.status).toBe(404);
+  });
+
+  it("returns 401 without a valid session", async () => {
+    const response = await GET(new Request("http://localhost"), makeContext("any-id"));
+    expect(response.status).toBe(401);
   });
 });

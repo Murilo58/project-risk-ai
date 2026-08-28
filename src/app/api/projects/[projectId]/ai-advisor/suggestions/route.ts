@@ -1,11 +1,14 @@
 import { listSuggestions } from "@/domain/ai-advisor/service";
 import { toErrorResponse } from "@/lib/api-errors";
+import { requireSession } from "@/lib/auth/dal";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/projects/[projectId]/ai-advisor/suggestions">,
 ) {
   try {
+    await requireSession(request);
+
     const { projectId } = await ctx.params;
     const suggestions = await listSuggestions(projectId);
     return Response.json(suggestions);
