@@ -43,6 +43,12 @@ describe("proxy — unauthenticated", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("allows the logout API endpoint without a session (must be able to clear a stale/invalid cookie)", async () => {
+    const response = await proxy(new NextRequest("http://localhost/api/auth/logout"));
+    expect(response.status).not.toBe(401);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("allows the cron endpoint without a user session (it has its own secret check)", async () => {
     const response = await proxy(
       new NextRequest("http://localhost/api/cron/health-snapshot"),

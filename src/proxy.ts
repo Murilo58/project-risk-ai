@@ -12,6 +12,11 @@ const PUBLIC_PAGE_PATHS = new Set(["/login", "/signup"]);
 const PUBLIC_API_PREFIXES = [
   "/api/auth/login",
   "/api/auth/signup",
+  // Logout must work even with an expired/invalid/missing session — the
+  // whole point is to clear whatever cookie the browser has, and a user
+  // stuck with a stale session would otherwise be unable to reach the
+  // endpoint that fixes that.
+  "/api/auth/logout",
   "/api/cron/health-snapshot",
 ];
 
