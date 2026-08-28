@@ -71,14 +71,23 @@ Combina dois fatores: atraso de marcos já ocorrido e descolamento entre progres
 
 ### 4.1 Atraso de marcos (até 15 pontos)
 
-Para cada `Milestone` atrasado (ver regra de negócio no PRD — realizado após planejado, ou planejado no passado sem realização e status ≠ "Concluído"):
+A classificação de atraso segue a regra de negócio do PRD (§9.3), implementada em `domain/milestones/schedule.ts` — fonte única usada também pela UI e pelo Dashboard Executivo, para que os três nunca divirjam entre si:
+
+- marcos com status "Cancelado" nunca são penalizados;
+- marcos "Concluídos" são avaliados por `dataRealizada` vs. `dataPlanejada` ("conclusão com atraso");
+- marcos ainda abertos são avaliados por `dataPlanejada` vs. a data de referência, por dia (UTC) — uma `dataRealizada` porventura presente (dado legado/inconsistente) é ignorada, já que só é válida quando o status é "Concluído".
+
+Para cada marco atrasado, o número de dias de atraso usa uma data de comparação diferente conforme o caso:
 
 ```
-diasAtraso = max(0, dataReferência − dataPlanejada em dias)
+dataComparação = dataRealizada, se o marco foi concluído com atraso
+dataComparação = dataReferência (hoje), se o marco ainda está aberto e atrasado
+
+diasAtraso = max(0, dataComparação − dataPlanejada em dias)
 penalidadeMarco = min(5, diasAtraso / 7 × 1,5)
 ```
 
-(ou seja, cada semana de atraso soma 1,5 ponto por marco, até um teto individual de 5 pontos por marco)
+(ou seja, cada semana de atraso soma 1,5 ponto por marco, até um teto individual de 5 pontos por marco; um marco ainda em aberto tem sua penalidade recalculada a cada dia — "cresce" enquanto não for concluído — enquanto um marco concluído com atraso fica com penalidade fixa, ancorada na data em que de fato terminou)
 
 `PenalidadeAtrasoMarcos = min(15, Σ penalidadeMarco)`
 

@@ -55,7 +55,9 @@ Cadastro, edição, exclusão (soft delete) e listagem de projetos com: nome, de
 
 ### RF02 — Milestones
 
-CRUD de marcos vinculados a um projeto: descrição, data planejada, data realizada (opcional), status, responsável.
+CRUD de marcos vinculados a um projeto: descrição, data planejada, data realizada, status, responsável.
+
+A data realizada só pode ser preenchida quando o status do marco for "Concluído" — nesse caso, ela é obrigatória. Para qualquer outro status, o campo permanece vazio e desabilitado na interface; se um marco concluído tiver seu status alterado para outro valor, a data realizada é automaticamente limpa pelo servidor.
 
 ### RF03 — Dependências
 
@@ -100,7 +102,11 @@ Toda tela que depende de dados assíncronos deve tratar explicitamente: carregan
 
 1. **Severidade do risco** = probabilidade (1–5) × impacto (1–5), resultando em 1–25, classificada em faixas (Baixa/Média/Alta/Crítica) — ver `HEALTH_SCORE.md`.
 2. Um risco com status "Encerrado" ou "Mitigado" não entra no cálculo de penalização do Health Score.
-3. Um milestone é considerado atrasado se `dataRealizada` for posterior a `dataPlanejada`, ou se `dataRealizada` for nula e `dataPlanejada` já tiver passado e o status não for "Concluído".
+3. Classificação de prazo de um milestone (mesma regra usada pela UI, pelo Dashboard Executivo e pelo Health Score):
+   - status "Cancelado": nunca é considerado atrasado, independentemente das datas.
+   - status "Concluído": atrasado ("conclusão com atraso") se `dataRealizada` for posterior a `dataPlanejada`; caso contrário, no prazo.
+   - qualquer outro status (marco ainda aberto): atrasado ("atraso aberto") se `dataPlanejada` já tiver passado a data de referência (comparação por dia, em UTC, para evitar falsos positivos por fuso horário); uma `dataRealizada` eventualmente presente é ignorada nesse caso — inclusive para dados legados/inconsistentes anteriores a esta regra — pois só é considerada válida quando o status é "Concluído" (ver RF02).
+   - `dataRealizada` só pode existir quando o status é "Concluído"; o backend normaliza (limpa) o campo sempre que o status efetivo não for esse, tanto na criação quanto na edição parcial de um marco.
 4. Sugestões da IA nunca alteram diretamente Projeto, Milestone, Dependência ou Risco. Uma sugestão aceita gera um **rascunho** pré-preenchido que o usuário deve revisar e salvar explicitamente.
 5. O Health Score é sempre recalculado a partir do estado atual dos dados — não é editável manualmente.
 6. Todo projeto tem exatamente um snapshot de Health Score por dia (o mais recente do dia sobrescreve o anterior do mesmo dia na leitura do histórico diário), garantindo uma série temporal utilizável sem explosão de registros.
