@@ -16,14 +16,14 @@ Health Score = 100 − Σ (penalidade de cada dimensão)
 
 O score começa em 100 (projeto perfeito) e perde pontos por dimensão. Cada dimensão tem um **teto de penalização** (não pode, sozinha, derrubar o score além do seu peso máximo), o que evita que um único fator extremo distorça o todo, mas ainda assim permite que a soma de vários problemas leve o score a zero.
 
-| Dimensão     | Penalização máxima | O que mede                                                   |
-| ------------ | -----------------: | ------------------------------------------------------------ |
-| Riscos       |                 30 | Riscos abertos, sua severidade e ausência de mitigação       |
-| Prazo        |                 25 | Atraso de marcos e progresso vs. esperado                    |
-| Dependências |                 20 | Dependências críticas travadas ou em risco                   |
-| Escopo       |                 15 | Riscos categorizados como "Escopo" abertos (proxy, ver §7)   |
-| Recursos     |                 10 | Riscos categorizados como "Recursos" abertos (proxy, ver §7) |
-| **Total**    |            **100** |                                                              |
+| Dimensão     | Penalização máxima | O que mede                                                               |
+| ------------ | -----------------: | ------------------------------------------------------------------------ |
+| Riscos       |                 30 | Riscos abertos, sua severidade e ausência de mitigação                   |
+| Prazo        |                 25 | Atraso de marcos, progresso vs. esperado e viabilidade do prazo restante |
+| Dependências |                 20 | Dependências críticas travadas ou em risco                               |
+| Escopo       |                 15 | Riscos categorizados como "Escopo" abertos (proxy, ver §7)               |
+| Recursos     |                 10 | Riscos categorizados como "Recursos" abertos (proxy, ver §7)             |
+| **Total**    |            **100** |                                                                          |
 
 `Score = max(0, 100 − PenalidadeRiscos − PenalidadePrazo − PenalidadeDependências − PenalidadeEscopo − PenalidadeRecursos)`
 
@@ -67,7 +67,7 @@ Para cada risco **aberto** (status ≠ "Mitigado"/"Encerrado"):
 
 ## 4. Dimensão: Prazo (peso máximo 25)
 
-Combina dois fatores: atraso de marcos já ocorrido e descolamento entre progresso esperado e realizado.
+Combina três fatores: atraso de marcos já ocorrido, descolamento entre progresso esperado e realizado, e viabilidade do ritmo necessário para concluir no prazo restante.
 
 ### 4.1 Atraso de marcos (até 15 pontos)
 
@@ -101,7 +101,32 @@ PenalidadeProgresso = min(10, gap / 5)
 
 (cada 5 pontos percentuais de atraso de progresso custam 1 ponto de score, até o teto de 10)
 
-`PenalidadePrazo = min(25, PenalidadeAtrasoMarcos + PenalidadeProgresso)`
+### 4.3 Viabilidade do prazo restante (até 10 pontos)
+
+O fator de progresso esperado (§4.2) mede o atraso já acumulado — mas não captura o caso de um projeto recém-criado, ainda sem atraso acumulado (`diasDecorridos ≈ 0`), cujo prazo restante já é fisicamente incompatível com o trabalho que falta (ex.: projeto "Em andamento", 0% de progresso, término previsto para amanhã). Este terceiro fator olha para frente, não para trás: mede o ritmo diário que seria necessário a partir de agora para concluir a tempo.
+
+Aplica-se somente a projetos com `status` "Em andamento" ou "Em espera" — os únicos em que a ausência de progresso, frente a um prazo apertado, é um sinal de risco. Projetos "Planejados" ainda não iniciaram execução (progresso baixo é esperado, independentemente do prazo); "Concluídos" e "Cancelados" já saíram do ciclo de execução ativa.
+
+```
+diasRestantes = max(1, dataTérmino − dataReferência, em dias)   // piso técnico de 1 dia
+progressoFaltante = max(0, 100 − progressoRealizado)
+ritmoNecessário = progressoFaltante / diasRestantes              // % de progresso necessário por dia
+```
+
+| Faixa de `ritmoNecessário` (%/dia) | Classificação | Penalidade |
+| ---------------------------------: | ------------- | ---------: |
+|                               ≤ 10 | Tranquilo     |          0 |
+|                            10 – 25 | Atenção       |          3 |
+|                            25 – 50 | Risco         |          6 |
+|                               > 50 | Crítico       |         10 |
+
+(faixas calibradas seguindo o mesmo estilo das tabelas de severidade de risco (§3) e criticidade de dependência (§5) — primeira proposta razoável, não resultado estatístico, revisável conforme uso real)
+
+Não avaliado quando o projeto não tem `dataTérmino` definida.
+
+`PenalidadePrazo = min(25, PenalidadeAtrasoMarcos + PenalidadeProgresso + PenalidadeViabilidade)`
+
+O teto de 25 da dimensão Prazo já garante que os três fatores juntos nunca ultrapassem esse limite — os fatores 4.2 e 4.3 podem disparar simultaneamente para o mesmo projeto (medem coisas diferentes: atraso acumulado vs. inviabilidade futura), sem risco de dupla penalização além do próprio teto.
 
 ## 5. Dimensão: Dependências (peso máximo 20)
 
@@ -153,7 +178,8 @@ Dados:
 - Marco 2: 3 dias → min(5, 3/7×1,5) = min(5, 0,64) = 0,64
 - PenalidadeAtrasoMarcos = min(15, 2,78) = 2,78
 - progressoEsperado = 50%, progressoRealizado = 30% → gap = 20 → PenalidadeProgresso = min(10, 20/5) = 4
-- **PenalidadePrazo = min(25, 2,78 + 4) = 6,78**
+- status = "Em andamento" → fator de viabilidade (§4.3) avaliado: diasRestantes = 60, progressoFaltante = 70 → ritmoNecessário ≈ 1,17%/dia → faixa "Tranquilo" → PenalidadeViabilidade = 0
+- **PenalidadePrazo = min(25, 2,78 + 4 + 0) = 6,78**
 
 ### Dependências
 

@@ -7,7 +7,7 @@ import {
   isMilestoneLate as isLateStatus,
 } from "@/domain/milestones/schedule";
 import { isRiskOpen } from "@/domain/risks/severity";
-import type { Criticality, HealthBand } from "@/lib/enums";
+import type { Criticality, HealthBand, ProjectStatus } from "@/lib/enums";
 
 export type HealthScoreMilestone = {
   plannedDate: Date;
@@ -32,6 +32,7 @@ export type HealthScoreProject = {
   startDate: Date;
   endDate: Date | null;
   progressPercent: number;
+  status: ProjectStatus;
 };
 
 export type HealthScoreInput = {
@@ -168,6 +169,43 @@ function milestoneDelayPenalty(
   return Math.min(5, (daysLate / 7) * 1.5);
 }
 
+// A project is only judged against the "required daily pace" below while it
+// is actively being worked on — see HEALTH_SCORE.md §4.3 for why PLANNED,
+// COMPLETED and CANCELLED are excluded.
+const FEASIBILITY_STATUSES: ReadonlySet<ProjectStatus> = new Set([
+  "IN_PROGRESS",
+  "ON_HOLD",
+]);
+const FEASIBILITY_MAX_PENALTY = 10;
+
+function scheduleFeasibilityPenalty(
+  project: HealthScoreProject,
+  referenceDate: Date,
+): { penalty: number; note: string | null } {
+  if (!project.endDate || !FEASIBILITY_STATUSES.has(project.status)) {
+    return { penalty: 0, note: null };
+  }
+
+  const daysRemaining = Math.max(
+    1,
+    (project.endDate.getTime() - referenceDate.getTime()) / DAY_MS,
+  );
+  const remainingProgress = Math.max(0, 100 - project.progressPercent);
+  const requiredPace = remainingProgress / daysRemaining;
+
+  let penalty = 0;
+  if (requiredPace > 50) penalty = FEASIBILITY_MAX_PENALTY;
+  else if (requiredPace > 25) penalty = 6;
+  else if (requiredPace > 10) penalty = 3;
+
+  const note =
+    penalty > 0
+      ? `Ritmo necessário para cumprir o prazo (${round2(requiredPace)}%/dia): -${round2(penalty)} (máx. ${FEASIBILITY_MAX_PENALTY})`
+      : null;
+
+  return { penalty, note };
+}
+
 function calculateScheduleDimension(
   project: HealthScoreProject,
   milestones: HealthScoreMilestone[],
@@ -207,7 +245,14 @@ function calculateScheduleDimension(
     notes.push("Prazo final não definido — fator de progresso esperado não avaliado.");
   }
 
-  return dimension(delayPenalty + progressPenalty, MAX_PENALTY.schedule, notes);
+  const feasibility = scheduleFeasibilityPenalty(project, referenceDate);
+  if (feasibility.note) notes.push(feasibility.note);
+
+  return dimension(
+    delayPenalty + progressPenalty + feasibility.penalty,
+    MAX_PENALTY.schedule,
+    notes,
+  );
 }
 
 // --- Dependencies (HEALTH_SCORE.md §5) --------------------------------------

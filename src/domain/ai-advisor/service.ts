@@ -75,6 +75,7 @@ export async function requestAiAnalysis(projectId: string, userId: string) {
       startDate: project.startDate,
       endDate: project.endDate,
       progressPercent: project.progressPercent,
+      status: project.status,
     },
     milestones: project.milestones,
     dependencies: project.dependencies,

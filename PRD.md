@@ -119,6 +119,7 @@ Todo `Project` tem um proprietário (`userId`) obrigatório. Um usuário só pod
 5. O Health Score é sempre recalculado a partir do estado atual dos dados — não é editável manualmente.
 6. Todo projeto tem exatamente um snapshot de Health Score por dia (o mais recente do dia sobrescreve o anterior do mesmo dia na leitura do histórico diário), garantindo uma série temporal utilizável sem explosão de registros.
 7. Disparo do AI Risk Advisor é limitado por dois controles independentes: um cooldown de 5 minutos por projeto, e um limite de 20 análises por usuário a cada 24 horas (contando todos os projetos daquele usuário) — o segundo existe especificamente para conter o consumo da Anthropic API por uma única conta, já que o cooldown por projeto sozinho não limita alguém que dispara análises em vários projetos em sequência.
+8. **Viabilidade do prazo restante** (dimensão Prazo do Health Score, `HEALTH_SCORE.md` §4.3): projetos com status "Em andamento" ou "Em espera" e `dataTérmino` definida são avaliados pelo ritmo diário necessário para concluir a tempo (`progressoFaltante / diasRestantes`, com piso de 1 dia restante). Detecta incoerências que o fator de progresso vs. tempo decorrido (§4.2) não captura — em especial um projeto recém-criado, sem atraso acumulado, mas com prazo já fisicamente incompatível com o trabalho pendente (ex.: "Em andamento", 0% de progresso, término previsto para amanhã). Projetos "Planejados", "Concluídos" e "Cancelados" ficam fora dessa avaliação.
 
 ## 10. Critérios de aceite (MVP)
 
