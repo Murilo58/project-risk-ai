@@ -1,6 +1,9 @@
 import { NotFoundError, toErrorResponse, ValidationError } from "@/lib/api-errors";
 import { prisma } from "@/lib/prisma";
-import { milestoneSchema } from "@/lib/validation/milestone";
+import {
+  milestoneUpdateSchema,
+  withNormalizedActualDate,
+} from "@/lib/validation/milestone";
 
 async function findMilestone(milestoneId: string) {
   const milestone = await prisma.milestone.findUnique({ where: { id: milestoneId } });
@@ -14,15 +17,17 @@ export async function PATCH(
 ) {
   try {
     const { milestoneId } = await ctx.params;
-    await findMilestone(milestoneId);
+    const existing = await findMilestone(milestoneId);
 
     const body = await request.json();
-    const parsed = milestoneSchema.partial().safeParse(body);
+    const parsed = milestoneUpdateSchema.safeParse(body);
     if (!parsed.success) throw new ValidationError(parsed.error);
 
+    const effectiveStatus = parsed.data.status ?? existing.status;
+    const data = withNormalizedActualDate(parsed.data, effectiveStatus);
     const milestone = await prisma.milestone.update({
       where: { id: milestoneId },
-      data: parsed.data,
+      data,
     });
     return Response.json(milestone);
   } catch (error) {

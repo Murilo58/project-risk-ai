@@ -1,6 +1,6 @@
 import { NotFoundError, toErrorResponse, ValidationError } from "@/lib/api-errors";
 import { prisma } from "@/lib/prisma";
-import { milestoneSchema } from "@/lib/validation/milestone";
+import { milestoneSchema, withNormalizedActualDate } from "@/lib/validation/milestone";
 
 async function assertActiveProject(projectId: string) {
   const project = await prisma.project.findFirst({
@@ -40,8 +40,9 @@ export async function POST(
     const parsed = milestoneSchema.safeParse(body);
     if (!parsed.success) throw new ValidationError(parsed.error);
 
+    const data = withNormalizedActualDate(parsed.data, parsed.data.status);
     const milestone = await prisma.milestone.create({
-      data: { ...parsed.data, projectId },
+      data: { ...data, projectId },
     });
     return Response.json(milestone, { status: 201 });
   } catch (error) {

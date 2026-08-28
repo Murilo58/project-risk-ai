@@ -1,3 +1,5 @@
+import { classifyMilestoneSchedule, isMilestoneLate } from "@/domain/milestones/schedule";
+
 export function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
   return new Date(value).toLocaleDateString("pt-BR", { timeZone: "UTC" });
@@ -13,9 +15,13 @@ export function isMilestoneDelayed(milestone: {
   actualDate: string | null;
   status: string;
 }): boolean {
-  if (milestone.status === "CANCELLED") return false;
-  if (milestone.actualDate) return milestone.actualDate > milestone.plannedDate;
-  return (
-    milestone.status !== "COMPLETED" && milestone.plannedDate < new Date().toISOString()
+  const status = classifyMilestoneSchedule(
+    {
+      status: milestone.status,
+      plannedDate: new Date(milestone.plannedDate),
+      actualDate: milestone.actualDate ? new Date(milestone.actualDate) : null,
+    },
+    new Date(),
   );
+  return isMilestoneLate(status);
 }

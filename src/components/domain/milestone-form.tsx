@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 
@@ -33,6 +34,8 @@ export function MilestoneForm({
     register,
     handleSubmit,
     control,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<MilestoneInput>({
     resolver: zodResolver(milestoneSchema),
@@ -45,6 +48,18 @@ export function MilestoneForm({
       owner: defaultValues?.owner ?? "",
     },
   });
+
+  const status = watch("status");
+  const isCompleted = status === "COMPLETED";
+
+  // Leaving "Concluído" must not leave a stale actualDate behind — the
+  // server also enforces this, but clearing it here keeps the form itself
+  // from ever showing the inconsistent combination the user can save.
+  useEffect(() => {
+    if (!isCompleted) {
+      setValue("actualDate", "" as unknown as Date, { shouldValidate: true });
+    }
+  }, [isCompleted, setValue]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
@@ -65,8 +80,18 @@ export function MilestoneForm({
           )}
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="m-actualDate">Data realizada</Label>
-          <Input id="m-actualDate" type="date" {...register("actualDate")} />
+          <Label htmlFor="m-actualDate">Data realizada{isCompleted ? " *" : ""}</Label>
+          <Input
+            id="m-actualDate"
+            type="date"
+            disabled={!isCompleted}
+            {...register("actualDate")}
+          />
+          {!isCompleted && (
+            <p className="text-muted-foreground text-sm">
+              Disponível apenas quando o status for &ldquo;Concluído&rdquo;.
+            </p>
+          )}
           {errors.actualDate && (
             <p className="text-destructive text-sm">{errors.actualDate.message}</p>
           )}

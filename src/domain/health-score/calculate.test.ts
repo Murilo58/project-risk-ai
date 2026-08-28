@@ -92,6 +92,24 @@ describe("calculateHealthScore — schedule dimension", () => {
     expect(result.dimensions.schedule.penalty).toBe(0);
   });
 
+  it("still penalizes a non-completed milestone with a stale actualDate (legacy inconsistent data)", () => {
+    // Regression: a row that has an actualDate but was never actually
+    // moved to COMPLETED must still be judged against its plannedDate,
+    // not treated as on-time just because actualDate is present.
+    const milestones: HealthScoreMilestone[] = [
+      { plannedDate: days(-7), actualDate: days(-7), status: "PLANNED" },
+    ];
+    const result = calculateHealthScore({
+      project: emptyProject,
+      milestones,
+      dependencies: [],
+      risks: [],
+      referenceDate: REF,
+    });
+
+    expect(result.dimensions.schedule.penalty).toBe(1.5);
+  });
+
   it("penalizes progress behind schedule using elapsed vs. total time", () => {
     // 100-day project, 50 elapsed (50% expected), only 30% done -> gap 20 -> penalty 4
     const project = { startDate: days(-50), endDate: days(50), progressPercent: 30 };

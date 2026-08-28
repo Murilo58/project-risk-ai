@@ -2,6 +2,10 @@
 // This module must never call an LLM or any non-deterministic source — see
 // HEALTH_SCORE.md, which this implementation follows section by section.
 
+import {
+  classifyMilestoneSchedule,
+  isMilestoneLate as isLateStatus,
+} from "@/domain/milestones/schedule";
 import { isRiskOpen } from "@/domain/risks/severity";
 import type { Criticality, HealthBand } from "@/lib/enums";
 
@@ -141,16 +145,22 @@ export function isMilestoneLate(
   milestone: HealthScoreMilestone,
   referenceDate: Date,
 ): boolean {
-  if (milestone.status === "CANCELLED") return false;
-  if (milestone.actualDate) return milestone.actualDate > milestone.plannedDate;
-  return milestone.status !== "COMPLETED" && milestone.plannedDate < referenceDate;
+  return isLateStatus(classifyMilestoneSchedule(milestone, referenceDate));
 }
 
 function milestoneDelayPenalty(
   milestone: HealthScoreMilestone,
   referenceDate: Date,
 ): number {
-  const comparisonDate = milestone.actualDate ?? referenceDate;
+  const scheduleStatus = classifyMilestoneSchedule(milestone, referenceDate);
+  if (!isLateStatus(scheduleStatus)) return 0;
+
+  // A milestone still running late is measured against "today" (it may get
+  // later still); one completed late is measured against when it actually
+  // finished — actualDate is guaranteed set whenever COMPLETED_LATE is
+  // returned (see classifyMilestoneSchedule).
+  const comparisonDate =
+    scheduleStatus === "COMPLETED_LATE" ? milestone.actualDate! : referenceDate;
   const daysLate = Math.max(
     0,
     (comparisonDate.getTime() - milestone.plannedDate.getTime()) / DAY_MS,

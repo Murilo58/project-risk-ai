@@ -52,4 +52,17 @@ describe("isMilestoneDelayed", () => {
       }),
     ).toBe(false);
   });
+
+  it("ignores a stale actualDate on a non-completed milestone (legacy inconsistent data)", () => {
+    // Regression: existing rows may carry an actualDate from before this
+    // rule existed even though status was never set back to COMPLETED.
+    // Schedule classification must fall back to the plannedDate check.
+    expect(
+      isMilestoneDelayed({
+        plannedDate: "2020-01-01T00:00:00.000Z",
+        actualDate: "2020-01-01T00:00:00.000Z",
+        status: "PLANNED",
+      }),
+    ).toBe(true);
+  });
 });
