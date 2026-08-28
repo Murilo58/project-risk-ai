@@ -1,10 +1,13 @@
-// Stateless session tokens for the single-admin MVP auth layer — see
-// ARCHITECTURE.md §9 for the rationale (no `User` table, env-var credentials).
+// Stateless session tokens — see ARCHITECTURE.md §12. The token's subject
+// (`sub`) is the real `User.id` from Postgres; the token itself carries no
+// other user data (name/e-mail are looked up from the DB when needed), and
+// is never queried against the database to verify — it's authenticated
+// purely by its signature and expiry, so verifying a session never requires
+// a DB round trip.
 import { jwtVerify, SignJWT } from "jose";
 
 export const SESSION_COOKIE_NAME = "prai_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7; // 7 days
-const SUBJECT = "admin";
 
 // Imported as a `CryptoKey` (via Web Crypto) rather than passed as a raw
 // `Uint8Array` — jose's WebCrypto build (used under jsdom/Edge runtimes,
@@ -31,23 +34,26 @@ async function getSecretKey(): Promise<CryptoKey> {
   return cachedKey;
 }
 
-export async function createSessionToken(): Promise<string> {
+export async function createSessionToken(userId: string): Promise<string> {
   return new SignJWT({})
     .setProtectedHeader({ alg: "HS256" })
-    .setSubject(SUBJECT)
+    .setSubject(userId)
     .setIssuedAt()
     .setExpirationTime(`${SESSION_DURATION_SECONDS}s`)
     .sign(await getSecretKey());
 }
 
-export async function verifySessionToken(token: string): Promise<boolean> {
+export type Session = { userId: string };
+
+export async function verifySessionToken(token: string): Promise<Session | null> {
   try {
     const { payload } = await jwtVerify(token, await getSecretKey(), {
       algorithms: ["HS256"],
     });
-    return payload.sub === SUBJECT;
+    if (typeof payload.sub !== "string" || payload.sub.length === 0) return null;
+    return { userId: payload.sub };
   } catch {
-    return false;
+    return null;
   }
 }
 

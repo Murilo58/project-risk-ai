@@ -462,17 +462,24 @@ O MVP combina:
 
 # Pós-MVP — Autenticação
 
-Antes da divulgação pública da Live Demo, foi adicionada uma camada de autenticação para proteger o acesso à aplicação e às operações que consomem a Claude API.
+Antes da divulgação pública da Live Demo, foi adicionada uma camada de autenticação para proteger o acesso à aplicação e às operações que consomem a Claude API. Ela passou por duas etapas:
 
-- Login single-admin (e-mail/senha), sem cadastro público, sem tabela `User` — usuário provisionado via variáveis de ambiente (`AUTH_ADMIN_EMAIL`, `AUTH_ADMIN_PASSWORD_HASH`).
-- Sessão stateless em cookie assinado (JWT HS256 via `jose`), sem tabela de sessões.
-- Todas as páginas e endpoints funcionais exigem sessão válida, exceto a tela de login e o endpoint de cron (que mantém seu próprio secret).
+**Etapa 1 — single-admin (retirada):** login com uma única credencial via variáveis de ambiente (`AUTH_ADMIN_EMAIL`, `AUTH_ADMIN_PASSWORD_HASH`), sem cadastro público e sem tabela `User`. Serviu apenas para proteger a Live Demo até a etapa 2 ficar pronta.
+
+**Etapa 2 — multiusuário real (atual):**
+
+- Cadastro público (`/signup`) e login por conta real, com tabela `User` (senha em hash `scrypt`, nunca texto puro).
+- **Isolamento de dados por usuário**: todo `Project` pertence a um único usuário (`userId` obrigatório); acessar o projeto de outra conta, mesmo trocando o ID na URL, retorna 404.
+- Sessão stateless em cookie assinado (JWT HS256 via `jose`, `sub` = `User.id`), sem tabela de sessões.
+- Todas as páginas e endpoints funcionais exigem sessão válida, exceto as telas de cadastro/login e o endpoint de cron (que mantém seu próprio secret).
 - Proteção em duas camadas: `proxy.ts` (checagem otimista, redireciona/nega antes de renderizar) e `requireSession()` dentro de cada Route Handler (checagem que não depende do Proxy).
-- Sem alteração no schema Prisma — zero migration.
+- AI Risk Advisor limitado por usuário (20 análises/24h por conta, além do cooldown de 5 min por projeto já existente) para conter consumo da Anthropic API.
+- Migração dos dados existentes: `Project.userId` foi adicionado como opcional, com um script de backfill (`scripts/backfill-project-owner.mjs`) pronto para associar os projetos pré-existentes a um usuário real antes de o campo virar obrigatório — sem perda de dados em nenhuma etapa. Ver `ARCHITECTURE.md` §12 para a sequência completa aplicada em produção.
+- `AUTH_ADMIN_EMAIL`/`AUTH_ADMIN_PASSWORD_HASH` (etapa 1) mantidas na Vercel até a validação completa do novo fluxo em produção; a remoção é um passo separado, deliberadamente posterior.
 
-Detalhamento técnico completo em `ARCHITECTURE.md` §12 e a regra de produto em `PRD.md` (RF10).
+Detalhamento técnico completo em `ARCHITECTURE.md` §12 e a regra de produto em `PRD.md` (RF10/RF11).
 
-**Status:** Concluída.
+**Status:** Implementação e testes concluídos; migração de dados e validação em produção pendentes de autorização explícita antes de commit/push/deploy.
 
 ---
 
@@ -482,11 +489,10 @@ As seguintes evoluções permanecem como **backlog e não fazem parte do escopo 
 
 ## Produto e colaboração
 
-- Cadastro público de usuários e gestão real de usuários (hoje: login single-admin via variáveis de ambiente — ver "Pós-MVP — Autenticação" acima).
-- Multiusuário.
-- Controle de acesso (RBAC).
-- Multi-tenancy.
-- Recuperação de senha e login social.
+- Controle de acesso (RBAC) dentro de uma conta.
+- Organizações, equipes e multi-tenancy empresarial (múltiplos usuários compartilhando o mesmo portfólio — hoje cada conta tem seus próprios dados isolados, ver "Pós-MVP — Autenticação" acima).
+- Recuperação de senha, confirmação de e-mail e login social.
+- Convite de usuários.
 
 ## Gestão de projetos
 

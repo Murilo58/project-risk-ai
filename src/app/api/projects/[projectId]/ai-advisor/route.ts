@@ -2,7 +2,11 @@ import {
   AiAdvisorNotConfiguredError,
   AiAdvisorUnavailableError,
 } from "@/domain/ai-advisor/claudeClient";
-import { AiAdvisorCooldownError, requestAiAnalysis } from "@/domain/ai-advisor/service";
+import {
+  AiAdvisorCooldownError,
+  AiAdvisorRateLimitError,
+  requestAiAnalysis,
+} from "@/domain/ai-advisor/service";
 import { toErrorResponse } from "@/lib/api-errors";
 import { requireSession } from "@/lib/auth/dal";
 
@@ -11,10 +15,10 @@ export async function POST(
   ctx: RouteContext<"/api/projects/[projectId]/ai-advisor">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
-    const suggestions = await requestAiAnalysis(projectId);
+    const suggestions = await requestAiAnalysis(projectId, userId);
     return Response.json(suggestions, { status: 201 });
   } catch (error) {
     if (error instanceof AiAdvisorCooldownError) {
@@ -22,6 +26,9 @@ export async function POST(
         { error: error.message, retryAfterSeconds: error.retryAfterSeconds },
         { status: 429 },
       );
+    }
+    if (error instanceof AiAdvisorRateLimitError) {
+      return Response.json({ error: error.message }, { status: 429 });
     }
     if (
       error instanceof AiAdvisorNotConfiguredError ||

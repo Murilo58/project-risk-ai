@@ -10,31 +10,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, api } from "@/lib/api-client";
-import { loginSchema, type LoginInput } from "@/lib/validation/auth";
+import { signupSchema, type SignupInput } from "@/lib/validation/auth";
 
-export function LoginForm() {
+export function SignupForm() {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+  } = useForm<SignupInput>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { name: "", email: "", password: "" },
   });
 
-  async function onSubmit(values: LoginInput) {
+  async function onSubmit(values: SignupInput) {
     setFormError(null);
     try {
-      await api.post("/api/auth/login", values);
+      await api.post("/api/auth/signup", values);
       router.push("/");
       router.refresh();
     } catch (error) {
       setFormError(
         error instanceof ApiError
           ? error.message
-          : "Não foi possível entrar. Tente novamente.",
+          : "Não foi possível criar a conta. Tente novamente.",
       );
     }
   }
@@ -42,9 +42,15 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
       <div className="grid gap-2">
-        <Label htmlFor="login-email">E-mail</Label>
+        <Label htmlFor="signup-name">Nome</Label>
+        <Input id="signup-name" autoComplete="name" {...register("name")} />
+        {errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="signup-email">E-mail</Label>
         <Input
-          id="login-email"
+          id="signup-email"
           type="email"
           autoComplete="email"
           {...register("email")}
@@ -55,11 +61,11 @@ export function LoginForm() {
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="login-password">Senha</Label>
+        <Label htmlFor="signup-password">Senha</Label>
         <Input
-          id="login-password"
+          id="signup-password"
           type="password"
-          autoComplete="current-password"
+          autoComplete="new-password"
           {...register("password")}
         />
         {errors.password && (
@@ -70,13 +76,13 @@ export function LoginForm() {
       {formError && <p className="text-destructive text-sm">{formError}</p>}
 
       <Button type="submit" disabled={isSubmitting} className="mt-2 justify-self-stretch">
-        {isSubmitting ? "Entrando..." : "Entrar"}
+        {isSubmitting ? "Criando conta..." : "Criar conta"}
       </Button>
 
       <p className="text-muted-foreground text-center text-sm">
-        Ainda não tem conta?{" "}
-        <Link href="/signup" className="text-primary underline underline-offset-4">
-          Criar conta
+        Já tem conta?{" "}
+        <Link href="/login" className="text-primary underline underline-offset-4">
+          Entrar
         </Link>
       </p>
     </form>

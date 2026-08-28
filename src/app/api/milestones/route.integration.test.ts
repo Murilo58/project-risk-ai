@@ -2,18 +2,30 @@
 // Postgres database (see DATABASE_URL — local `.env` or the CI Postgres
 // service). Route Handlers are plain async functions, so we can call them
 // directly with a Request object, no HTTP server needed.
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { POST } from "@/app/api/projects/[projectId]/milestones/route";
 import { PATCH } from "@/app/api/milestones/[milestoneId]/route";
+import { createUser } from "@/lib/auth/credentials";
 import { prisma } from "@/lib/prisma";
 import { authCookieHeader } from "@/test/auth";
 
 const createdProjectIds: string[] = [];
+let testUserId: string;
 let cookie: string;
 
 beforeAll(async () => {
-  cookie = await authCookieHeader();
+  const user = await createUser({
+    name: "Usuário de Teste — Marcos",
+    email: "milestones-integration-test@example.com",
+    password: "correct-password",
+  });
+  testUserId = user.id;
+  cookie = await authCookieHeader(testUserId);
+});
+
+afterAll(async () => {
+  await prisma.user.delete({ where: { id: testUserId } });
 });
 
 afterEach(async () => {
@@ -31,6 +43,7 @@ async function createProject() {
       startDate: new Date("2026-01-01"),
       status: "IN_PROGRESS",
       criticality: "MEDIUM",
+      userId: testUserId,
     },
   });
   createdProjectIds.push(project.id);
@@ -95,6 +108,37 @@ describe("POST /api/projects/:projectId/milestones", () => {
     );
 
     expect(response.status).toBe(401);
+  });
+
+  it("returns 404 when the project belongs to a different user (cross-user isolation)", async () => {
+    const otherUser = await createUser({
+      name: "Outro Usuário",
+      email: "other-user-milestones-post@example.com",
+      password: "correct-password",
+    });
+    const otherProject = await prisma.project.create({
+      data: {
+        name: "Projeto de Outro Usuário",
+        owner: "QA",
+        startDate: new Date(),
+        userId: otherUser.id,
+      },
+    });
+
+    try {
+      const response = await POST(
+        postRequest({
+          description: "Entrega piloto",
+          plannedDate: "2026-02-01",
+          owner: "João",
+        }),
+        projectContext(otherProject.id),
+      );
+      expect(response.status).toBe(404);
+    } finally {
+      await prisma.project.delete({ where: { id: otherProject.id } });
+      await prisma.user.delete({ where: { id: otherUser.id } });
+    }
   });
 });
 
@@ -166,5 +210,33 @@ describe("PATCH /api/milestones/:milestoneId — scenario G", () => {
     const body = await response.json();
     expect(body.owner).toBe("Nova Responsável");
     expect(body.actualDate).not.toBeNull();
+  });
+
+  it("returns 404 when the milestone's project belongs to a different user (cross-user isolation)", async () => {
+    const otherUser = await createUser({
+      name: "Outro Usuário",
+      email: "other-user-milestones-patch@example.com",
+      password: "correct-password",
+    });
+    const otherProject = await prisma.project.create({
+      data: {
+        name: "Projeto de Outro Usuário",
+        owner: "QA",
+        startDate: new Date(),
+        userId: otherUser.id,
+      },
+    });
+    const otherMilestone = await createMilestone(otherProject);
+
+    try {
+      const response = await PATCH(
+        patchRequest({ owner: "Tentativa Indevida" }),
+        milestoneContext(otherMilestone.id),
+      );
+      expect(response.status).toBe(404);
+    } finally {
+      await prisma.project.delete({ where: { id: otherProject.id } });
+      await prisma.user.delete({ where: { id: otherUser.id } });
+    }
   });
 });

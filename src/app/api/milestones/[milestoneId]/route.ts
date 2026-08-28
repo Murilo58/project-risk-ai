@@ -6,8 +6,10 @@ import {
   withNormalizedActualDate,
 } from "@/lib/validation/milestone";
 
-async function findMilestone(milestoneId: string) {
-  const milestone = await prisma.milestone.findUnique({ where: { id: milestoneId } });
+async function findMilestone(milestoneId: string, userId: string) {
+  const milestone = await prisma.milestone.findFirst({
+    where: { id: milestoneId, project: { userId } },
+  });
   if (!milestone) throw new NotFoundError("Marco não encontrado.");
   return milestone;
 }
@@ -17,10 +19,10 @@ export async function PATCH(
   ctx: RouteContext<"/api/milestones/[milestoneId]">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { milestoneId } = await ctx.params;
-    const existing = await findMilestone(milestoneId);
+    const existing = await findMilestone(milestoneId, userId);
 
     const body = await request.json();
     const parsed = milestoneUpdateSchema.safeParse(body);
@@ -43,10 +45,10 @@ export async function DELETE(
   ctx: RouteContext<"/api/milestones/[milestoneId]">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { milestoneId } = await ctx.params;
-    await findMilestone(milestoneId);
+    await findMilestone(milestoneId, userId);
 
     await prisma.milestone.delete({ where: { id: milestoneId } });
     return new Response(null, { status: 204 });

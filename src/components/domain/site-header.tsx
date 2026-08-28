@@ -16,7 +16,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
 
-  if (pathname === "/login") return null;
+  if (pathname === "/login" || pathname === "/signup") return null;
 
   async function handleLogout() {
     await api.post("/api/auth/logout", {});

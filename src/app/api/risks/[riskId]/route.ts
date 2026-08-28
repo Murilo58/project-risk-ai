@@ -4,18 +4,20 @@ import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { riskSchema } from "@/lib/validation/risk";
 
-async function findRisk(riskId: string) {
-  const risk = await prisma.risk.findUnique({ where: { id: riskId } });
+async function findRisk(riskId: string, userId: string) {
+  const risk = await prisma.risk.findFirst({
+    where: { id: riskId, project: { userId } },
+  });
   if (!risk) throw new NotFoundError("Risco não encontrado.");
   return risk;
 }
 
 export async function PATCH(request: Request, ctx: RouteContext<"/api/risks/[riskId]">) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { riskId } = await ctx.params;
-    const existing = await findRisk(riskId);
+    const existing = await findRisk(riskId, userId);
 
     const body = await request.json();
     const parsed = riskSchema.partial().safeParse(body);
@@ -36,10 +38,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/risks/[ris
 
 export async function DELETE(request: Request, ctx: RouteContext<"/api/risks/[riskId]">) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { riskId } = await ctx.params;
-    await findRisk(riskId);
+    await findRisk(riskId, userId);
 
     await prisma.risk.delete({ where: { id: riskId } });
     return new Response(null, { status: 204 });

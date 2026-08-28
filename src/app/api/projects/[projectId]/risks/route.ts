@@ -4,9 +4,9 @@ import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { riskSchema } from "@/lib/validation/risk";
 
-async function assertActiveProject(projectId: string) {
+async function assertActiveProject(projectId: string, userId: string) {
   const project = await prisma.project.findFirst({
-    where: { id: projectId, deletedAt: null },
+    where: { id: projectId, userId, deletedAt: null },
     select: { id: true },
   });
   if (!project) throw new NotFoundError("Projeto não encontrado.");
@@ -17,10 +17,10 @@ export async function GET(
   ctx: RouteContext<"/api/projects/[projectId]/risks">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
-    await assertActiveProject(projectId);
+    await assertActiveProject(projectId, userId);
 
     const risks = await prisma.risk.findMany({
       where: { projectId },
@@ -37,10 +37,10 @@ export async function POST(
   ctx: RouteContext<"/api/projects/[projectId]/risks">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
-    await assertActiveProject(projectId);
+    await assertActiveProject(projectId, userId);
 
     const body = await request.json();
     const parsed = riskSchema.safeParse(body);

@@ -32,6 +32,17 @@ describe("proxy — unauthenticated", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("allows access to the signup page itself", async () => {
+    const response = await proxy(new NextRequest("http://localhost/signup"));
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("allows the signup API endpoint without a session", async () => {
+    const response = await proxy(new NextRequest("http://localhost/api/auth/signup"));
+    expect(response.status).not.toBe(401);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("allows the cron endpoint without a user session (it has its own secret check)", async () => {
     const response = await proxy(
       new NextRequest("http://localhost/api/cron/health-snapshot"),
@@ -62,6 +73,14 @@ describe("proxy — authenticated", () => {
     const cookie = await authCookieHeader();
     const response = await proxy(
       new NextRequest("http://localhost/login", { headers: { Cookie: cookie } }),
+    );
+    expect(response.headers.get("location")).toBe("http://localhost/");
+  });
+
+  it("redirects away from /signup back to /", async () => {
+    const cookie = await authCookieHeader();
+    const response = await proxy(
+      new NextRequest("http://localhost/signup", { headers: { Cookie: cookie } }),
     );
     expect(response.headers.get("location")).toBe("http://localhost/");
   });

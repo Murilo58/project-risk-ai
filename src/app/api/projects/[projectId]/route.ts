@@ -3,9 +3,9 @@ import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { projectUpdateSchema } from "@/lib/validation/project";
 
-async function findActiveProject(projectId: string) {
+async function findActiveProject(projectId: string, userId: string) {
   const project = await prisma.project.findFirst({
-    where: { id: projectId, deletedAt: null },
+    where: { id: projectId, userId, deletedAt: null },
     include: {
       milestones: { orderBy: { plannedDate: "asc" } },
       dependencies: { orderBy: { createdAt: "desc" } },
@@ -21,10 +21,10 @@ export async function GET(
   ctx: RouteContext<"/api/projects/[projectId]">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
-    const project = await findActiveProject(projectId);
+    const project = await findActiveProject(projectId, userId);
     return Response.json(project);
   } catch (error) {
     return toErrorResponse(error);
@@ -36,10 +36,10 @@ export async function PATCH(
   ctx: RouteContext<"/api/projects/[projectId]">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
-    await findActiveProject(projectId);
+    await findActiveProject(projectId, userId);
 
     const body = await request.json();
     const parsed = projectUpdateSchema.safeParse(body);
@@ -60,10 +60,10 @@ export async function DELETE(
   ctx: RouteContext<"/api/projects/[projectId]">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
-    await findActiveProject(projectId);
+    await findActiveProject(projectId, userId);
 
     await prisma.project.update({
       where: { id: projectId },

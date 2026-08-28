@@ -78,7 +78,7 @@ O detalhamento técnico, modelo de dados e decisões arquiteturais estão docume
 
 O MVP contempla:
 
-- login single-admin, com todas as páginas e endpoints funcionais protegidos por sessão;
+- cadastro e login de usuários, com todas as páginas e endpoints funcionais protegidos por sessão e isolamento de dados por conta;
 - gestão de projetos;
 - cadastro e acompanhamento de milestones;
 - gestão de dependências;
@@ -93,7 +93,7 @@ O MVP contempla:
 - fluxo de aceitar ou descartar sugestões da IA;
 - persistência em PostgreSQL.
 
-O detalhamento completo dos requisitos funcionais RF01–RF09 está disponível em [PRD.md](PRD.md).
+O detalhamento completo dos requisitos funcionais RF01–RF11 está disponível em [PRD.md](PRD.md).
 
 ---
 
@@ -157,13 +157,16 @@ Detalhes de integração, tratamento de erros, timeout e controle de chamadas es
 
 ## 7. Autenticação
 
-A aplicação exige login para acessar qualquer página ou endpoint funcional — a única rota pública é a própria tela de login.
+A aplicação exige login para acessar qualquer página ou endpoint funcional — as únicas rotas públicas são as telas de cadastro e login.
 
-- Login **single-admin** (e-mail/senha de um único usuário), sem cadastro público, sem tabela `User` no banco — o usuário autorizado é provisionado por variáveis de ambiente.
+- **Cadastro e login reais** (nome/e-mail/senha), com uma tabela `User` no banco — sem contas provisionadas por variável de ambiente.
+- Senha nunca fica em texto puro: hash `scrypt`, gerado a cada cadastro.
+- **Isolamento de dados por conta**: cada projeto pertence a um único usuário; não é possível ver, editar ou excluir dados de outra conta trocando um ID na URL — a tentativa retorna "não encontrado".
 - Sessão mantida por um cookie assinado (`httpOnly`, `Secure` em produção), sem tabela de sessões.
 - Logout invalida a sessão e impede novo acesso às áreas privadas sem novo login.
+- AI Risk Advisor limitado por usuário (além do cooldown por projeto) para conter consumo da Anthropic API por uma única conta.
 
-Não é um sistema de IAM completo: sem multiusuário, sem recuperação de senha, sem login social, sem RBAC — ver o que fica fora do escopo em [PRD.md](PRD.md). Detalhamento técnico completo (Proxy, sessão, hashing de senha) em [ARCHITECTURE.md](ARCHITECTURE.md) §12.
+Não é um sistema de IAM completo: sem recuperação de senha, sem confirmação de e-mail, sem login social, sem RBAC, sem organizações/equipes — ver o que fica fora do escopo em [PRD.md](PRD.md). Detalhamento técnico completo (Proxy, sessão, hashing de senha, isolamento) em [ARCHITECTURE.md](ARCHITECTURE.md) §12.
 
 ---
 
@@ -238,15 +241,7 @@ Copie o arquivo de exemplo:
 cp .env.example .env
 ```
 
-Configure as variáveis necessárias no `.env`.
-
-Para gerar `AUTH_ADMIN_PASSWORD_HASH` (nunca a senha em texto puro):
-
-```bash
-node scripts/hash-password.mjs
-```
-
-Cole o e-mail escolhido em `AUTH_ADMIN_EMAIL` e o hash gerado em `AUTH_ADMIN_PASSWORD_HASH`.
+Configure as variáveis necessárias no `.env`. Depois de subir a aplicação, crie sua conta pela própria tela `/signup` — não há usuário pré-provisionado.
 
 ### Banco de dados — opção A: Docker
 
@@ -310,8 +305,6 @@ ANTHROPIC_API_KEY=
 ANTHROPIC_MODEL=
 CRON_SECRET=
 AUTH_SECRET=
-AUTH_ADMIN_EMAIL=
-AUTH_ADMIN_PASSWORD_HASH=
 ```
 
 ### `DATABASE_URL`
@@ -334,15 +327,7 @@ Protege o endpoint utilizado para geração automática de snapshots do Health S
 
 ### `AUTH_SECRET`
 
-Segredo usado para assinar o cookie de sessão (JWT). Gere um valor aleatório, ex.: `openssl rand -base64 32`.
-
-### `AUTH_ADMIN_EMAIL`
-
-E-mail do único usuário autorizado a fazer login.
-
-### `AUTH_ADMIN_PASSWORD_HASH`
-
-Hash `scrypt` da senha do administrador (formato `salt:hash`), gerado localmente com `node scripts/hash-password.mjs`. Nunca a senha em texto puro.
+Segredo usado para assinar o cookie de sessão (JWT). Gere um valor aleatório, ex.: `openssl rand -base64 32`. Não há variáveis de credencial de administrador — contas são criadas pelos próprios usuários em `/signup`.
 
 > Nenhuma credencial real deve ser versionada no GitHub. O arquivo `.env` está incluído no `.gitignore`.
 

@@ -7,10 +7,10 @@ export async function GET(
   ctx: RouteContext<"/api/projects/[projectId]/ai-advisor/suggestions">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
-    const suggestions = await listSuggestions(projectId);
+    const suggestions = await listSuggestions(projectId, userId);
     return Response.json(suggestions);
   } catch (error) {
     return toErrorResponse(error);

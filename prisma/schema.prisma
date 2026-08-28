@@ -88,6 +88,21 @@ enum AiSuggestionStatus {
 // Models
 // ---------------------------------------------------------------------------
 
+// Multi-user auth (see ARCHITECTURE.md §12 — supersedes the earlier
+// single-admin, env-var-only credential model). No email verification or
+// password reset in the MVP; see PRD.md for the explicitly out-of-scope list.
+model User {
+  id           String @id @default(cuid())
+  name         String
+  email        String @unique
+  passwordHash String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
 model Project {
   id              String        @id @default(cuid())
   name            String
@@ -106,6 +121,13 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Required as of this migration — but only apply this to a database
+  // after scripts/backfill-project-owner.mjs has assigned every
+  // pre-existing row a real owner (see ARCHITECTURE.md §12). Applying it
+  // before that backfill fails outright against existing rows.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   milestones           Milestone[]
   dependencies         Dependency[]
   risks                Risk[]
@@ -113,6 +135,7 @@ model Project {
   aiSuggestions        AiSuggestion[]
 
   @@index([deletedAt])
+  @@index([userId])
 }
 
 model Milestone {
@@ -133,13 +156,13 @@ model Milestone {
 }
 
 model Dependency {
-  id          String            @id @default(cuid())
+  id          String           @id @default(cuid())
   projectId   String
   description String
   type        DependencyType
   owner       String
-  criticality Criticality       @default(MEDIUM)
-  status      DependencyStatus  @default(OPEN)
+  criticality Criticality      @default(MEDIUM)
+  status      DependencyStatus @default(OPEN)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -150,20 +173,20 @@ model Dependency {
 }
 
 model Risk {
-  id                  String       @id @default(cuid())
-  projectId           String
-  title               String
-  description         String?
-  category            RiskCategory
-  probability         Int
-  impact              Int
+  id                 String       @id @default(cuid())
+  projectId          String
+  title              String
+  description        String?
+  category           RiskCategory
+  probability        Int
+  impact             Int
   /// Denormalized (probability * impact), recomputed on every write.
   /// Persisted so it can be queried/sorted/indexed without recalculating
   /// in application code on every read.
-  severity            Int
-  owner               String
-  mitigationStrategy  String?
-  status              RiskStatus   @default(OPEN)
+  severity           Int
+  owner              String
+  mitigationStrategy String?
+  status             RiskStatus   @default(OPEN)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

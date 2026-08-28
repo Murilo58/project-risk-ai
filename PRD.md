@@ -87,9 +87,13 @@ Endpoint que, a partir dos dados atuais de um projeto, chama a API do Claude (no
 
 Toda tela que depende de dados assíncronos deve tratar explicitamente: carregando, vazio (sem dados ainda) e erro.
 
-### RF10 — Autenticação (single-admin)
+### RF10 — Autenticação e contas de usuário
 
-A aplicação exige login para acesso a qualquer página ou endpoint funcional, exceto a própria tela de login. Login por e-mail/senha de um único usuário administrador, provisionado via variáveis de ambiente (sem cadastro público, sem tabela `User` — ver `ARCHITECTURE.md` §12). Sessão mantida por cookie assinado (`httpOnly`, `Secure` em produção); logout invalida a sessão e impede novo acesso sem login. Adicionada para proteger a Live Demo pública antes da divulgação do MVP — não é um sistema de gestão de identidade multiusuário.
+A aplicação exige login para acesso a qualquer página ou endpoint funcional, exceto as telas de login e cadastro. Cadastro público por nome/e-mail/senha (`User` no banco, e-mail único, senha em hash `scrypt` — nunca texto puro); login por e-mail/senha; sessão mantida por cookie assinado (`httpOnly`, `Secure` em produção); logout invalida a sessão e impede novo acesso sem login novamente. Cada `Project` pertence a exatamente um usuário (RF11); não há cadastro assistido por convite, confirmação de e-mail ou recuperação de senha nesta fase (ver §12).
+
+### RF11 — Isolamento de dados por usuário
+
+Todo `Project` tem um proprietário (`userId`) obrigatório. Um usuário só pode listar, visualizar, criar, editar ou excluir projetos — e, por extensão, marcos, dependências, riscos, Health Score e sugestões de IA — que pertençam à sua própria conta. Uma tentativa de acessar um recurso de outro usuário (inclusive manipulando o ID na URL) deve resultar em "não encontrado", nunca em exposição do dado ou do fato de que ele existe.
 
 ## 8. Requisitos não funcionais
 
@@ -114,6 +118,7 @@ A aplicação exige login para acesso a qualquer página ou endpoint funcional, 
 4. Sugestões da IA nunca alteram diretamente Projeto, Milestone, Dependência ou Risco. Uma sugestão aceita gera um **rascunho** pré-preenchido que o usuário deve revisar e salvar explicitamente.
 5. O Health Score é sempre recalculado a partir do estado atual dos dados — não é editável manualmente.
 6. Todo projeto tem exatamente um snapshot de Health Score por dia (o mais recente do dia sobrescreve o anterior do mesmo dia na leitura do histórico diário), garantindo uma série temporal utilizável sem explosão de registros.
+7. Disparo do AI Risk Advisor é limitado por dois controles independentes: um cooldown de 5 minutos por projeto, e um limite de 20 análises por usuário a cada 24 horas (contando todos os projetos daquele usuário) — o segundo existe especificamente para conter o consumo da Anthropic API por uma única conta, já que o cooldown por projeto sozinho não limita alguém que dispara análises em vários projetos em sequência.
 
 ## 10. Critérios de aceite (MVP)
 
@@ -127,11 +132,11 @@ A aplicação exige login para acesso a qualquer página ou endpoint funcional, 
 
 ## 11. Escopo do MVP
 
-Inclui: RF01–RF10 conforme descrito acima. Autenticação é single-admin (RF10), não multiusuário — a aplicação continua single-tenant, com campos de responsável como texto livre e um único ambiente/workspace.
+Inclui: RF01–RF11 conforme descrito acima. Cada usuário tem sua própria conta e seus próprios dados (RF10/RF11); campos de responsável dentro de um projeto continuam texto livre (não são contas de usuário).
 
 ## 12. Fora do escopo (nesta fase)
 
-- Cadastro público de usuários, múltiplas contas, recuperação de senha, login social, RBAC e multi-tenancy (RF10 cobre apenas login single-admin).
+- Recuperação de senha, confirmação de e-mail, login social, RBAC (papéis/permissões dentro de uma conta), organizações/equipes e multi-tenancy empresarial (múltiplos usuários compartilhando o mesmo portfólio) — RF10/RF11 cobrem apenas contas individuais isoladas entre si.
 - Notificações (e-mail, Slack, push).
 - Exportação de relatórios (PDF/Excel).
 - Anexos de arquivos em riscos/marcos.

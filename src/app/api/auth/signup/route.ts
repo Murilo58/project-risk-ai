@@ -1,24 +1,20 @@
 import { toErrorResponse, ValidationError } from "@/lib/api-errors";
-import { verifyUserCredentials } from "@/lib/auth/credentials";
+import { createUser } from "@/lib/auth/credentials";
 import { buildSessionCookieHeader, createSessionToken } from "@/lib/auth/session";
-import { loginSchema } from "@/lib/validation/auth";
+import { signupSchema } from "@/lib/validation/auth";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const parsed = loginSchema.safeParse(body);
+    const parsed = signupSchema.safeParse(body);
     if (!parsed.success) throw new ValidationError(parsed.error);
 
-    const { email, password } = parsed.data;
-    const user = await verifyUserCredentials(email, password);
-    if (!user) {
-      return Response.json({ error: "E-mail ou senha inválidos." }, { status: 401 });
-    }
+    const user = await createUser(parsed.data);
 
     const token = await createSessionToken(user.id);
     return Response.json(
       { id: user.id, name: user.name, email: user.email },
-      { status: 200, headers: { "Set-Cookie": buildSessionCookieHeader(token) } },
+      { status: 201, headers: { "Set-Cookie": buildSessionCookieHeader(token) } },
     );
   } catch (error) {
     return toErrorResponse(error);

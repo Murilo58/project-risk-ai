@@ -3,8 +3,10 @@ import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { dependencySchema } from "@/lib/validation/dependency";
 
-async function findDependency(dependencyId: string) {
-  const dependency = await prisma.dependency.findUnique({ where: { id: dependencyId } });
+async function findDependency(dependencyId: string, userId: string) {
+  const dependency = await prisma.dependency.findFirst({
+    where: { id: dependencyId, project: { userId } },
+  });
   if (!dependency) throw new NotFoundError("Dependência não encontrada.");
   return dependency;
 }
@@ -14,10 +16,10 @@ export async function PATCH(
   ctx: RouteContext<"/api/dependencies/[dependencyId]">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { dependencyId } = await ctx.params;
-    await findDependency(dependencyId);
+    await findDependency(dependencyId, userId);
 
     const body = await request.json();
     const parsed = dependencySchema.partial().safeParse(body);
@@ -38,10 +40,10 @@ export async function DELETE(
   ctx: RouteContext<"/api/dependencies/[dependencyId]">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { dependencyId } = await ctx.params;
-    await findDependency(dependencyId);
+    await findDependency(dependencyId, userId);
 
     await prisma.dependency.delete({ where: { id: dependencyId } });
     return new Response(null, { status: 204 });

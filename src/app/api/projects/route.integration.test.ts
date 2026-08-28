@@ -2,18 +2,30 @@
 // Postgres database (see DATABASE_URL — local `.env` or the CI Postgres
 // service). Route Handlers are plain async functions, so we can call them
 // directly with a Request object, no HTTP server needed.
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { GET, POST } from "@/app/api/projects/route";
 import { PATCH } from "@/app/api/projects/[projectId]/route";
+import { createUser } from "@/lib/auth/credentials";
 import { prisma } from "@/lib/prisma";
 import { authCookieHeader } from "@/test/auth";
 
 const createdProjectIds: string[] = [];
+let testUserId: string;
 let cookie: string;
 
 beforeAll(async () => {
-  cookie = await authCookieHeader();
+  const user = await createUser({
+    name: "Usuário de Teste — Projetos",
+    email: "projects-integration-test@example.com",
+    password: "correct-password",
+  });
+  testUserId = user.id;
+  cookie = await authCookieHeader(testUserId);
+});
+
+afterAll(async () => {
+  await prisma.user.delete({ where: { id: testUserId } });
 });
 
 afterEach(async () => {
@@ -94,6 +106,7 @@ describe("PATCH /api/projects/:id", () => {
         startDate: new Date("2026-01-10"),
         status: "IN_PROGRESS",
         criticality: "HIGH",
+        userId: testUserId,
       },
     });
     createdProjectIds.push(project.id);
@@ -157,6 +170,33 @@ describe("PATCH /api/projects/:id", () => {
     );
     expect(response.status).toBe(404);
   });
+
+  it("returns 404 when the project belongs to a different user (cross-user isolation)", async () => {
+    const otherUser = await createUser({
+      name: "Outro Usuário",
+      email: "other-user-projects-patch@example.com",
+      password: "correct-password",
+    });
+    const otherProject = await prisma.project.create({
+      data: {
+        name: "Projeto de Outro Usuário",
+        owner: "QA",
+        startDate: new Date(),
+        userId: otherUser.id,
+      },
+    });
+
+    try {
+      const response = await PATCH(
+        patchRequest({ progressPercent: 50 }),
+        makeContext(otherProject.id),
+      );
+      expect(response.status).toBe(404);
+    } finally {
+      await prisma.project.delete({ where: { id: otherProject.id } });
+      await prisma.user.delete({ where: { id: otherUser.id } });
+    }
+  });
 });
 
 describe("GET /api/projects", () => {
@@ -167,6 +207,7 @@ describe("GET /api/projects", () => {
         owner: "QA",
         startDate: new Date(),
         deletedAt: new Date(),
+        userId: testUserId,
       },
     });
     createdProjectIds.push(created.id);
@@ -175,6 +216,31 @@ describe("GET /api/projects", () => {
     const body = await response.json();
 
     expect(body.some((p: { id: string }) => p.id === created.id)).toBe(false);
+  });
+
+  it("excludes another user's projects from the listing", async () => {
+    const otherUser = await createUser({
+      name: "Outro Usuário",
+      email: "other-user-projects-list@example.com",
+      password: "correct-password",
+    });
+    const otherProject = await prisma.project.create({
+      data: {
+        name: "Projeto de Outro Usuário",
+        owner: "QA",
+        startDate: new Date(),
+        userId: otherUser.id,
+      },
+    });
+
+    try {
+      const response = await GET(getRequest());
+      const body = await response.json();
+      expect(body.some((p: { id: string }) => p.id === otherProject.id)).toBe(false);
+    } finally {
+      await prisma.project.delete({ where: { id: otherProject.id } });
+      await prisma.user.delete({ where: { id: otherUser.id } });
+    }
   });
 
   it("returns 401 without a valid session", async () => {

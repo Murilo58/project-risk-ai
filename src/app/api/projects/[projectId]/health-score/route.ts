@@ -8,11 +8,11 @@ export async function GET(
   ctx: RouteContext<"/api/projects/[projectId]/health-score">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
     const project = await prisma.project.findFirst({
-      where: { id: projectId, deletedAt: null },
+      where: { id: projectId, userId, deletedAt: null },
       select: { id: true },
     });
     if (!project) throw new NotFoundError("Projeto não encontrado.");

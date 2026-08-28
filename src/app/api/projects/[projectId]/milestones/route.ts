@@ -3,9 +3,9 @@ import { requireSession } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { milestoneSchema, withNormalizedActualDate } from "@/lib/validation/milestone";
 
-async function assertActiveProject(projectId: string) {
+async function assertActiveProject(projectId: string, userId: string) {
   const project = await prisma.project.findFirst({
-    where: { id: projectId, deletedAt: null },
+    where: { id: projectId, userId, deletedAt: null },
     select: { id: true },
   });
   if (!project) throw new NotFoundError("Projeto não encontrado.");
@@ -16,10 +16,10 @@ export async function GET(
   ctx: RouteContext<"/api/projects/[projectId]/milestones">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
-    await assertActiveProject(projectId);
+    await assertActiveProject(projectId, userId);
 
     const milestones = await prisma.milestone.findMany({
       where: { projectId },
@@ -36,10 +36,10 @@ export async function POST(
   ctx: RouteContext<"/api/projects/[projectId]/milestones">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { projectId } = await ctx.params;
-    await assertActiveProject(projectId);
+    await assertActiveProject(projectId, userId);
 
     const body = await request.json();
     const parsed = milestoneSchema.safeParse(body);

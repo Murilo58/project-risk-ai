@@ -7,10 +7,10 @@ export async function POST(
   ctx: RouteContext<"/api/ai-advisor/suggestions/[suggestionId]/dismiss">,
 ) {
   try {
-    await requireSession(request);
+    const { userId } = await requireSession(request);
 
     const { suggestionId } = await ctx.params;
-    const suggestion = await decideSuggestion(suggestionId, "DISMISSED");
+    const suggestion = await decideSuggestion(suggestionId, userId, "DISMISSED");
     return Response.json(suggestion);
   } catch (error) {
     return toErrorResponse(error);

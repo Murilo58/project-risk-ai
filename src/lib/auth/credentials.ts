@@ -1,7 +1,10 @@
-// Single-admin credential check for the MVP — no `User` table (see
-// ARCHITECTURE.md §9). The admin e-mail/password hash are provisioned as
-// environment variables; see scripts/hash-password.mjs to generate the hash.
+// Multi-user credentials, backed by the `User` table (see ARCHITECTURE.md
+// §12 — supersedes the earlier single-admin, env-var-only model).
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
+
+import { ConflictError } from "@/lib/api-errors";
+import { Prisma } from "@/generated/prisma/client";
+import { prisma } from "@/lib/prisma";
 
 const SCRYPT_KEY_LENGTH = 64;
 
@@ -24,20 +27,45 @@ function verifyPassword(password: string, storedHash: string): boolean {
 
 // A hash with a valid shape but no real match, used to keep the password
 // verification cost constant even when the submitted e-mail doesn't match
-// AUTH_ADMIN_EMAIL — avoids leaking, via response time, whether a given
-// e-mail is the configured admin account.
-const DUMMY_HASH = hashPassword("not-the-real-password");
+// any user — avoids leaking, via response time, whether a given e-mail is
+// registered.
+const DUMMY_HASH = hashPassword("not-a-real-password");
 
-export function verifyCredentials(email: string, password: string): boolean {
-  const adminEmail = process.env.AUTH_ADMIN_EMAIL;
-  const adminPasswordHash = process.env.AUTH_ADMIN_PASSWORD_HASH;
-  if (!adminEmail || !adminPasswordHash) return false;
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
 
-  const emailMatches = email.trim().toLowerCase() === adminEmail.trim().toLowerCase();
-  const passwordMatches = verifyPassword(
-    password,
-    emailMatches ? adminPasswordHash : DUMMY_HASH,
-  );
+export type PublicUser = { id: string; name: string; email: string };
 
-  return emailMatches && passwordMatches;
+export async function createUser(data: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<PublicUser> {
+  const email = normalizeEmail(data.email);
+  const passwordHash = hashPassword(data.password);
+
+  try {
+    return await prisma.user.create({
+      data: { name: data.name.trim(), email, passwordHash },
+      select: { id: true, name: true, email: true },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new ConflictError("E-mail já cadastrado.");
+    }
+    throw error;
+  }
+}
+
+export async function verifyUserCredentials(
+  email: string,
+  password: string,
+): Promise<PublicUser | null> {
+  const user = await prisma.user.findUnique({ where: { email: normalizeEmail(email) } });
+  const passwordMatches = verifyPassword(password, user ? user.passwordHash : DUMMY_HASH);
+
+  return user && passwordMatches
+    ? { id: user.id, name: user.name, email: user.email }
+    : null;
 }

@@ -14,6 +14,13 @@ export class UnauthorizedError extends Error {
   }
 }
 
+export class ConflictError extends Error {
+  constructor(message = "Conflito de dados.") {
+    super(message);
+    this.name = "ConflictError";
+  }
+}
+
 export class ValidationError extends Error {
   issues: { path: string; message: string }[];
 
@@ -36,6 +43,9 @@ export function toErrorResponse(error: unknown): Response {
   }
   if (error instanceof UnauthorizedError) {
     return Response.json({ error: error.message }, { status: 401 });
+  }
+  if (error instanceof ConflictError) {
+    return Response.json({ error: error.message }, { status: 409 });
   }
 
   console.error(error);
