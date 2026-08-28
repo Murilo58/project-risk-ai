@@ -6,7 +6,7 @@ import { riskSchema } from "@/lib/validation/risk";
 
 async function findRisk(riskId: string, userId: string) {
   const risk = await prisma.risk.findFirst({
-    where: { id: riskId, project: { userId } },
+    where: { id: riskId, project: { userId, deletedAt: null } },
   });
   if (!risk) throw new NotFoundError("Risco não encontrado.");
   return risk;

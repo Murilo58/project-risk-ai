@@ -139,7 +139,7 @@ export async function decideSuggestion(
   status: "ACCEPTED" | "DISMISSED",
 ) {
   const suggestion = await prisma.aiSuggestion.findFirst({
-    where: { id: suggestionId, project: { userId } },
+    where: { id: suggestionId, project: { userId, deletedAt: null } },
   });
   if (!suggestion) throw new NotFoundError("Sugestão não encontrada.");
 

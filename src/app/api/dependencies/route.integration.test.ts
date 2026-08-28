@@ -158,4 +158,30 @@ describe("PATCH/DELETE /api/dependencies/:dependencyId", () => {
       await prisma.user.delete({ where: { id: otherUser.id } });
     }
   });
+
+  it("returns 404 when the dependency's own project has been soft-deleted", async () => {
+    const project = await createProject();
+    const dependency = await createDependency(project);
+
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { deletedAt: new Date() },
+    });
+
+    const patchResponse = await PATCH(
+      patchRequest({ status: "BLOCKED" }),
+      dependencyContext(dependency.id),
+    );
+    expect(patchResponse.status).toBe(404);
+
+    const deleteResponse = await DELETE(
+      deleteRequest(),
+      dependencyContext(dependency.id),
+    );
+    expect(deleteResponse.status).toBe(404);
+
+    const stored = await prisma.dependency.findUnique({ where: { id: dependency.id } });
+    expect(stored).not.toBeNull();
+    expect(stored?.status).toBe("OPEN");
+  });
 });

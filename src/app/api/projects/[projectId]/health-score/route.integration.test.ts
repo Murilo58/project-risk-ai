@@ -118,4 +118,28 @@ describe("GET /api/projects/:id/health-score", () => {
       await prisma.user.delete({ where: { id: otherUser.id } });
     }
   });
+
+  it("returns 404 for a soft-deleted project and does not create a snapshot", async () => {
+    const project = await prisma.project.create({
+      data: {
+        name: "Projeto Excluído",
+        owner: "QA",
+        startDate: new Date(),
+        userId: testUserId,
+        deletedAt: new Date(),
+      },
+    });
+    projectId = project.id;
+
+    const response = await GET(
+      new Request("http://localhost", { headers: { Cookie: cookie } }),
+      makeContext(project.id),
+    );
+    expect(response.status).toBe(404);
+
+    const snapshot = await prisma.healthScoreSnapshot.findFirst({
+      where: { projectId: project.id },
+    });
+    expect(snapshot).toBeNull();
+  });
 });

@@ -161,4 +161,27 @@ describe("PATCH/DELETE /api/risks/:riskId", () => {
       await prisma.user.delete({ where: { id: otherUser.id } });
     }
   });
+
+  it("returns 404 when the risk's own project has been soft-deleted", async () => {
+    const project = await createProject();
+    const risk = await createRisk(project);
+
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { deletedAt: new Date() },
+    });
+
+    const patchResponse = await PATCH(
+      patchRequest({ status: "MITIGATED" }),
+      riskContext(risk.id),
+    );
+    expect(patchResponse.status).toBe(404);
+
+    const deleteResponse = await DELETE(deleteRequest(), riskContext(risk.id));
+    expect(deleteResponse.status).toBe(404);
+
+    const stored = await prisma.risk.findUnique({ where: { id: risk.id } });
+    expect(stored).not.toBeNull();
+    expect(stored?.status).toBe("OPEN");
+  });
 });

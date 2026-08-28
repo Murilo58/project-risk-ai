@@ -8,7 +8,7 @@ import {
 
 async function findMilestone(milestoneId: string, userId: string) {
   const milestone = await prisma.milestone.findFirst({
-    where: { id: milestoneId, project: { userId } },
+    where: { id: milestoneId, project: { userId, deletedAt: null } },
   });
   if (!milestone) throw new NotFoundError("Marco não encontrado.");
   return milestone;

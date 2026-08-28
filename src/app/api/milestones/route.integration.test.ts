@@ -239,4 +239,23 @@ describe("PATCH /api/milestones/:milestoneId — scenario G", () => {
       await prisma.user.delete({ where: { id: otherUser.id } });
     }
   });
+
+  it("returns 404 when the milestone's own project has been soft-deleted", async () => {
+    const project = await createProject();
+    const milestone = await createMilestone(project);
+
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { deletedAt: new Date() },
+    });
+
+    const response = await PATCH(
+      patchRequest({ owner: "Tentativa Após Exclusão" }),
+      milestoneContext(milestone.id),
+    );
+    expect(response.status).toBe(404);
+
+    const stored = await prisma.milestone.findUnique({ where: { id: milestone.id } });
+    expect(stored?.owner).toBe("João");
+  });
 });

@@ -154,4 +154,24 @@ describe("decideSuggestion", () => {
       decideSuggestion(suggestion.id, intruder.id, "DISMISSED"),
     ).rejects.toThrow(NotFoundError);
   });
+
+  it("rejects a suggestion whose own project has been soft-deleted", async () => {
+    const user = await createTestUser("ai-advisor-decide-softdeleted@example.com");
+    const project = await createTestProject(user.id);
+    const suggestion = await prisma.aiSuggestion.create({
+      data: { projectId: project.id, type: "RISK", content: {}, status: "PENDING" },
+    });
+
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { deletedAt: new Date() },
+    });
+
+    await expect(decideSuggestion(suggestion.id, user.id, "ACCEPTED")).rejects.toThrow(
+      NotFoundError,
+    );
+
+    const stored = await prisma.aiSuggestion.findUnique({ where: { id: suggestion.id } });
+    expect(stored?.status).toBe("PENDING");
+  });
 });

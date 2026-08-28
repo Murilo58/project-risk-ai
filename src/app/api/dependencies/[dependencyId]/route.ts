@@ -5,7 +5,7 @@ import { dependencySchema } from "@/lib/validation/dependency";
 
 async function findDependency(dependencyId: string, userId: string) {
   const dependency = await prisma.dependency.findFirst({
-    where: { id: dependencyId, project: { userId } },
+    where: { id: dependencyId, project: { userId, deletedAt: null } },
   });
   if (!dependency) throw new NotFoundError("Dependência não encontrada.");
   return dependency;
