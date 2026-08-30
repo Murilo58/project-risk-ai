@@ -9,6 +9,12 @@ import type { NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth/session";
 
 const PUBLIC_PAGE_PATHS = new Set(["/login", "/signup"]);
+// The home page is rendered for everyone, authenticated or not: it is a client
+// component whose portfolio data comes from `/api/dashboard` (still 401-gated),
+// so its HTML carries only a generic shell plus the Open Graph / Twitter
+// metadata that social link crawlers need. Logged-out humans are bounced to
+// `/login` client-side by the page itself.
+const PUBLICLY_RENDERABLE_PAGE_PATHS = new Set(["/"]);
 const PUBLIC_API_PREFIXES = [
   "/api/auth/login",
   "/api/auth/signup",
@@ -25,6 +31,10 @@ export async function proxy(request: NextRequest) {
   const isApiRoute = pathname.startsWith("/api/");
 
   if (PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
+  if (PUBLICLY_RENDERABLE_PAGE_PATHS.has(pathname)) {
     return NextResponse.next();
   }
 
@@ -49,10 +59,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // `opengraph-image` / `twitter-image` are public social-preview assets: link
-  // crawlers (LinkedIn, WhatsApp, Facebook) fetch them unauthenticated, so they
-  // must bypass the auth gate just like `favicon.ico`.
+  // `opengraph-image` / `twitter-image` are public social-preview assets and
+  // `robots.txt` is fetched by crawlers before scraping — all bypass the auth
+  // gate just like `favicon.ico`, so a crawler never gets a login redirect
+  // where it expects an asset.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|opengraph-image|twitter-image).*)",
+    "/((?!_next/static|_next/image|favicon.ico|opengraph-image|twitter-image|robots.txt).*)",
   ],
 };

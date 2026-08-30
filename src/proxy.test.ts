@@ -11,9 +11,10 @@ describe("proxy — unauthenticated", () => {
     expect(response.headers.get("location")).toBe("http://localhost/login");
   });
 
-  it("redirects the dashboard (root) to /login", async () => {
+  it("serves the home page without a session so link crawlers can read its metadata", async () => {
     const response = await proxy(new NextRequest("http://localhost/"));
-    expect(response.headers.get("location")).toBe("http://localhost/login");
+    expect(response.status).not.toBe(307);
+    expect(response.headers.get("location")).toBeNull();
   });
 
   it("returns 401 JSON for a protected API route", async () => {
@@ -63,6 +64,14 @@ describe("proxy — authenticated", () => {
     const cookie = await authCookieHeader();
     const response = await proxy(
       new NextRequest("http://localhost/projects", { headers: { Cookie: cookie } }),
+    );
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("passes through the home page (renders the real dashboard when signed in)", async () => {
+    const cookie = await authCookieHeader();
+    const response = await proxy(
+      new NextRequest("http://localhost/", { headers: { Cookie: cookie } }),
     );
     expect(response.headers.get("location")).toBeNull();
   });

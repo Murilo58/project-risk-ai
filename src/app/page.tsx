@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
+import { ApiError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -28,7 +31,17 @@ const HEALTH_BAND_TONE: Record<HealthBand, StatCardTone> = {
 };
 
 export default function DashboardPage() {
-  const { data, isLoading, isError } = useDashboard();
+  const router = useRouter();
+  const { data, isLoading, isError, error } = useDashboard();
+
+  // The proxy lets `/` render for anyone so crawlers can read its metadata;
+  // a logged-out human gets a 401 from `/api/dashboard` and is sent to login.
+  const isUnauthenticated = error instanceof ApiError && error.status === 401;
+  useEffect(() => {
+    if (isUnauthenticated) {
+      router.replace("/login");
+    }
+  }, [isUnauthenticated, router]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -51,7 +64,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {isError && <EmptyState title="Não foi possível carregar o dashboard." />}
+      {isError && !isUnauthenticated && (
+        <EmptyState title="Não foi possível carregar o dashboard." />
+      )}
 
       {data && data.projects.length === 0 && (
         <EmptyState
