@@ -13,8 +13,7 @@ const inter = Inter({
 
 const siteUrl = "https://project-risk-ai.vercel.app";
 const siteName = "Project Risk AI";
-const title =
-  "Project Risk AI — Monitoramento Preventivo de Riscos de Projeto com IA";
+const title = "Project Risk AI — Monitoramento Preventivo de Riscos de Projeto com IA";
 const description =
   "Plataforma que calcula automaticamente a saúde de projetos de TI e usa IA para identificar riscos ainda não cadastrados, com causa e mitigação sugerida.";
 
