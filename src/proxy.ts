@@ -49,5 +49,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // `opengraph-image` / `twitter-image` are public social-preview assets: link
+  // crawlers (LinkedIn, WhatsApp, Facebook) fetch them unauthenticated, so they
+  // must bypass the auth gate just like `favicon.ico`.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|opengraph-image|twitter-image).*)",
+  ],
 };
